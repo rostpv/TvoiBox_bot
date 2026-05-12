@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.next/
+.turbo/
+.env
+.env.local
+.env.*.local
+coverage/
+*.log
+logs/**/*.log
+logs/**/*.jsonl
+apps/**/dist/
+packages/**/dist/
+pnpm-lock.yaml

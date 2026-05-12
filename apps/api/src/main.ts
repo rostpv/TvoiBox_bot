@@ -1,0 +1,57 @@
+import "reflect-metadata";
+
+import { NestFactory } from "@nestjs/core";
+
+import { AppModule } from "./app.module";
+import { createRuntimeLogger } from "./common/logging/runtime-logger";
+import { getApiRuntimeConfig } from "./config/app-config.service";
+
+function maskConnectionString(connectionString: string): string {
+  return connectionString.replace(/:\/\/([^:]+):([^@]+)@/, "://$1:***@");
+}
+
+async function bootstrap() {
+  const bootstrapLogger = createRuntimeLogger({
+    scope: "api-bootstrap",
+    filePath: "logs/api/runtime.jsonl",
+    minLevel: "debug",
+  });
+
+  try {
+    const config = getApiRuntimeConfig();
+
+    bootstrapLogger.info("API configuration loaded", {
+      application: config.name,
+      host: config.host,
+      port: config.port,
+      nodeEnv: config.nodeEnv,
+      timezone: config.timezone,
+    });
+
+    bootstrapLogger.info("Database bootstrap check", {
+      databaseUrl: maskConnectionString(config.databaseUrl),
+      note: "Real database connection will be implemented on stage 3.",
+    });
+
+    const app = await NestFactory.create(AppModule, {
+      bufferLogs: false,
+    });
+
+    await app.listen(config.port, config.host);
+
+    bootstrapLogger.info("API started successfully", {
+      url: `http://${config.host}:${config.port}/health`,
+    });
+  } catch (error) {
+    const normalizedError = error as Error;
+
+    bootstrapLogger.error("API bootstrap failed", {
+      message: normalizedError.message,
+      stack: normalizedError.stack,
+    });
+
+    process.exitCode = 1;
+  }
+}
+
+void bootstrap();

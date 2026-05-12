@@ -1,0 +1,18 @@
+{
+  "name": "tvoy-box-training-scheduler",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "dev": "corepack pnpm dev:api",
+    "dev:api": "corepack pnpm --filter @tvoy-box/api dev",
+    "dev:bot": "corepack pnpm --filter @tvoy-box/bot dev",
+    "build": "corepack pnpm -r build",
+    "typecheck": "corepack pnpm -r typecheck",
+    "lint": "corepack pnpm -r lint"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENT
+  TRAINER
+}
+
+enum SlotStatus {
+  OPEN
+  HELD
+  BOOKED
+  CLOSED
+  CANCELLED
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+  EXPIRED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum TrainingStatus {
+  SCHEDULED
+  CANCELLED
+  COMPLETED
+  RESCHEDULED
+}
+
+enum RescheduleStatus {
+  PROPOSED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum NoSlotRequestStatus {
+  NEW
+  REVIEWED
+  ARCHIVED
+}
+
+enum SyncOperation {
+  CREATE
+  UPDATE
+  CANCEL
+  RESYNC
+}
+
+enum SyncStatus {
+  SUCCESS
+  FAILED
+  CONFLICT
+}
+
+model Client {
+  id                String               @id @default(cuid())
+  telegramId        String               @unique
+  username          String?
+  fullName          String
+  phone             String?
+  role              UserRole             @default(CLIENT)
+  consentAcceptedAt DateTime
+  isBlacklisted     Boolean              @default(false)
+  blacklistReason   String?
+  blacklistedAt     DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  bookings          Booking[]
+  trainings         Training[]
+  noSlotRequests    NoSlotRequest[]
+  blacklistEntries  BlacklistEntry[]
+
+  @@index([fullName])
+  @@index([phone])
+  @@map("clients")
+}
+
+model Slot {
+  id              String    @id @default(cuid())
+  startAt         DateTime
+  endAt           DateTime
+  status          SlotStatus @default(OPEN)
+  isManuallyClosed Boolean   @default(false)
+  closureReason   String?
+  heldUntil       DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  bookings        Booking[]
+  trainings       Training[]
+
+  @@unique([startAt, endAt])
+  @@index([status, startAt])
+  @@map("slots")
+}
+
+model Booking {
+  id               String        @id @default(cuid())
+  clientId         String
+  slotId           String
+  status           BookingStatus @default(PENDING)
+  clientComment    String?
+  trainerComment   String?
+  expiresAt        DateTime
+  confirmedAt      DateTime?
+  rejectedAt       DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  client           Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  slot             Slot          @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  training         Training?
+  proposedChanges  Reschedule[]
+
+  @@index([clientId, status])
+  @@index([slotId, status])
+  @@index([expiresAt])
+  @@map("bookings")
+}
+
+model Training {
+  id                    String            @id @default(cuid())
+  clientId              String
+  slotId                String            @unique
+  bookingId             String            @unique
+  status                TrainingStatus    @default(SCHEDULED)
+  startAt               DateTime
+  endAt                 DateTime
+  calendarEventId       String?
+  clientCalendarIcsUrl  String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  cancelledAt           DateTime?
+  client                Client            @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  slot                  Slot              @relation(fields: [slotId], references: [id], onDelete: Restrict)
+  booking               Booking           @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  reschedules           Reschedule[]
+  syncLogs              CalendarSyncLog[]
+
+  @@index([clientId, status])
+  @@index([startAt, status])
+  @@map("trainings")
+}
+
+model Reschedule {
+  id                 String           @id @default(cuid())
+  bookingId          String
+  trainingId         String
+  proposedSlotId     String?
+  proposedStartAt    DateTime
+  proposedEndAt      DateTime
+  trainerComment     String
+  clientDecisionNote String?
+  status             RescheduleStatus @default(PROPOSED)
+  respondedAt        DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  booking            Booking          @relation(fields: [bookingId], references: [id], onDelete: Restrict)
+  training           Training         @relation(fields: [trainingId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId, status])
+  @@index([trainingId, status])
+  @@map("reschedules")
+}
+
+model NoSlotRequest {
+  id               String              @id @default(cuid())
+  clientId         String
+  preferredDays    String[]
+  preferredTime    String?
+  clientComment    String?
+  status           NoSlotRequestStatus @default(NEW)
+  trainerComment   String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  reviewedAt       DateTime?
+  client           Client              @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, status])
+  @@index([status, createdAt])
+  @@map("no_slot_requests")
+}
+
+model TrainerSettings {
+  id                   String   @id @default(cuid())
+  bookingHorizonDays   Int      @default(14)
+  sameDayBookingCutoff Int      @default(0)
+  startMessage         String?
+  infoMessage          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("trainer_settings")
+}
+
+model BlacklistEntry {
+  id          String   @id @default(cuid())
+  clientId    String
+  reason      String
+  createdAt   DateTime @default(now())
+  removedAt   DateTime?
+  removedBy   String?
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Restrict)
+
+  @@index([clientId, removedAt])
+  @@map("blacklist_entries")
+}
+
+model CalendarSyncLog {
+  id              String        @id @default(cuid())
+  trainingId      String
+  operation       SyncOperation
+  status          SyncStatus
+  externalEventId String?
+  message         String?
+  payload         Json?
+  createdAt       DateTime      @default(now())
+  training        Training      @relation(fields: [trainingId], references: [id], onDelete: Restrict)
+
+  @@index([trainingId, createdAt])
+  @@index([status, createdAt])
+  @@map("calendar_sync_logs")
+}
