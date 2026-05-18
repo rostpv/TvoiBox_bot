@@ -1,0 +1,15 @@
+node_modules
+.git
+.next
+.turbo
+dist
+coverage
+logs
+apps/api/logs
+.tools
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+ID google calendar.txt

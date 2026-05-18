@@ -1,0 +1,85 @@
+name: ${STACK_NAME}
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-Europe/Moscow}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ../infra/db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - internal
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.api
+    env_file:
+      - ../.env.server
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["sh", "-lc", "cd apps/api && ./node_modules/.bin/prisma db push --schema prisma/schema.prisma"]
+    restart: "no"
+    networks:
+      - internal
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.api
+    restart: unless-stopped
+    env_file:
+      - ../.env.server
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${API_BIND_IP:-127.0.0.1}:${API_PORT:-3300}:3000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"fetch('http://127.0.0.1:3000/health').then((res) => { if (!res.ok) process.exit(1); }).catch(() => process.exit(1));\"",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - internal
+
+  bot:
+    build:
+      context: ..
+      dockerfile: infra/docker/Dockerfile.bot
+    restart: unless-stopped
+    env_file:
+      - ../.env.server
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - internal
+
+networks:
+  internal:
+    name: ${STACK_NAME}_internal
+    driver: bridge
+
+volumes:
+  postgres-data:
+    name: ${STACK_NAME}_postgres_data

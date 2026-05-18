@@ -1,5 +1,10 @@
 type RuntimeMode = "development" | "test" | "production";
 type LogLevel = "debug" | "info" | "warn" | "error";
+const TELEGRAM_ID_PLACEHOLDERS = new Set([
+  "123456789",
+  "PUT_ADMIN_TELEGRAM_ID_HERE",
+  "PUT_TRAINER_TELEGRAM_ID_HERE",
+]);
 
 function getRequiredEnv(name: string, source: NodeJS.ProcessEnv = process.env): string {
   const value = source[name]?.trim();
@@ -17,6 +22,20 @@ function getOptionalEnv(
   source: NodeJS.ProcessEnv = process.env,
 ): string {
   return source[name]?.trim() || fallback;
+}
+
+function getTelegramIdEnv(
+  name: string,
+  fallback: string,
+  source: NodeJS.ProcessEnv = process.env,
+): string {
+  const value = source[name]?.trim();
+
+  if (value && !TELEGRAM_ID_PLACEHOLDERS.has(value)) {
+    return value;
+  }
+
+  return fallback;
 }
 
 function getBooleanEnv(
@@ -44,13 +63,15 @@ export interface BotRuntimeConfig {
 }
 
 export function getBotRuntimeConfig(): BotRuntimeConfig {
+  const adminTelegramId = getRequiredEnv("ADMIN_TELEGRAM_ID");
+
   return {
-    adminTelegramId: getRequiredEnv("ADMIN_TELEGRAM_ID"),
+    adminTelegramId,
     apiBaseUrl: getOptionalEnv("API_BASE_URL", "http://localhost:3000"),
     dryRun: getBooleanEnv("BOT_DRY_RUN", true),
     logLevel: getOptionalEnv("BOT_LOG_LEVEL", "debug") as LogLevel,
     nodeEnv: getOptionalEnv("NODE_ENV", "development") as RuntimeMode,
     telegramBotToken: getRequiredEnv("TELEGRAM_BOT_TOKEN"),
-    trainerTelegramId: getRequiredEnv("TRAINER_TELEGRAM_ID"),
+    trainerTelegramId: getTelegramIdEnv("TRAINER_TELEGRAM_ID", adminTelegramId),
   };
 }

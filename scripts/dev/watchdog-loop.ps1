@@ -1,5 +1,8 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
+[Console]::InputEncoding = [System.Text.UTF8Encoding]::new($false)
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [Console]::OutputEncoding
+chcp 65001 > $null
 
 $rootPath = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $watchdogDir = Join-Path $rootPath "logs\watchdog"
@@ -7,10 +10,11 @@ $logPath = Join-Path $watchdogDir "runtime.log"
 $statePath = Join-Path $watchdogDir "state.json"
 $managerPidPath = Join-Path $watchdogDir "manager.pid"
 $postgresBinDir = Join-Path $rootPath ".tools\postgres\dist\pgsql\bin"
-$postgresCtlPath = Join-Path $postgresBinDir "pg_ctl.exe"
+$postgresExePath = Join-Path $postgresBinDir "postgres.exe"
 $postgresReadyPath = Join-Path $postgresBinDir "pg_isready.exe"
 $postgresDataPath = Join-Path $rootPath ".tools\postgres\data"
 $postgresLogPath = Join-Path $rootPath ".tools\postgres\postgres.log"
+$postmasterPidPath = Join-Path $postgresDataPath "postmaster.pid"
 
 New-Item -ItemType Directory -Path $watchdogDir -Force | Out-Null
 Set-Location $rootPath
@@ -81,24 +85,90 @@ function Test-PostgresReady {
   return $LASTEXITCODE -eq 0
 }
 
+function Read-PostgresPidFromPidFile {
+  if (-not (Test-Path -LiteralPath $postmasterPidPath)) {
+    return $null
+  }
+
+  try {
+    $rawPid = Get-Content -LiteralPath $postmasterPidPath -ErrorAction Stop | Select-Object -First 1
+    $postgresPid = 0
+
+    if ([int]::TryParse($rawPid, [ref]$postgresPid)) {
+      return $postgresPid
+    }
+  }
+  catch {
+    return $null
+  }
+
+  return $null
+}
+
+function Remove-StalePostmasterPid {
+  $postgresPid = Read-PostgresPidFromPidFile
+
+  if (-not $postgresPid) {
+    return
+  }
+
+  if (Test-ProcessAlive -ProcessId $postgresPid) {
+    return
+  }
+
+  Remove-Item -LiteralPath $postmasterPidPath -Force -ErrorAction SilentlyContinue
+}
+
+function Start-PostgresProcess {
+  if (-not (Test-Path -LiteralPath $postgresExePath)) {
+    throw "Portable PostgreSQL executable not found: $postgresExePath"
+  }
+
+  Remove-StalePostmasterPid
+
+  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $startInfo.FileName = $postgresExePath
+  $startInfo.Arguments = "-D `"$postgresDataPath`""
+  $startInfo.WorkingDirectory = $postgresBinDir
+  $startInfo.UseShellExecute = $false
+  $startInfo.CreateNoWindow = $true
+  $startInfo.RedirectStandardOutput = $true
+  $startInfo.RedirectStandardError = $true
+
+  $process = New-Object System.Diagnostics.Process
+  $process.StartInfo = $startInfo
+  [void]$process.Start()
+  $process.BeginOutputReadLine()
+  $process.BeginErrorReadLine()
+
+  return $process.Id
+}
+
 function Ensure-PostgresReady {
   if (Test-PostgresReady) {
     return
   }
 
-  if (-not (Test-Path -LiteralPath $postgresCtlPath)) {
-    throw "Portable PostgreSQL not found: $postgresCtlPath"
-  }
-
   Write-WatchdogLog "PostgreSQL is down, attempting restart"
-  & $postgresCtlPath -D $postgresDataPath -l $postgresLogPath start | Out-Null
-  Start-Sleep -Seconds 3
+  $startedPid = Start-PostgresProcess
+
+  for ($attempt = 0; $attempt -lt 15; $attempt++) {
+    Start-Sleep -Seconds 1
+
+    if (Test-PostgresReady) {
+      Write-WatchdogLog ("PostgreSQL restarted successfully, pid={0}" -f $startedPid)
+      return
+    }
+  }
 
   if (-not (Test-PostgresReady)) {
-    throw "PostgreSQL failed to restart"
-  }
+    $errorTail = ""
+    if (Test-Path -LiteralPath $postgresLogPath) {
+      $errorTail = (Get-Content -LiteralPath $postgresLogPath -Tail 20) -join " | "
+    }
 
-  Write-WatchdogLog "PostgreSQL restarted successfully"
+    throw ("PostgreSQL failed to restart. Recent log tail: {0}" -f $errorTail)
+  }
 }
 
 function Find-ApiProcessId {

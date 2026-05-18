@@ -1,4 +1,4 @@
-﻿import { InlineKeyboard, InputFile } from "grammy";
+import { InlineKeyboard, InputFile } from "grammy";
 import type { Bot, Context } from "grammy";
 
 import type { LoggerLike } from "../common/logger-like";
@@ -1169,7 +1169,7 @@ async function buildClientTrainingsView(
     };
   } catch (error) {
     const normalizedError = error as Error;
-    dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЂР°Р·РґРµР» РњРѕРё С‚СЂРµРЅРёСЂРѕРІРєРё", {
+    dependencies.logger.warn("Не удалось загрузить раздел Мои тренировки", {
       userId,
       message: normalizedError.message,
     });
@@ -1200,7 +1200,7 @@ async function buildClientBookingView(
       bookingCutoffHours = settingsResponse.settings.sameDayBookingCutoff;
     } catch (settingsError) {
       const normalizedSettingsError = settingsError as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РѕРіСЂР°РЅРёС‡РµРЅРёРµ Р·Р°РїРёСЃРё Р·Р°СЂР°РЅРµРµ РґР»СЏ РєР»РёРµРЅС‚Р°", {
+      dependencies.logger.warn("Не удалось загрузить ограничение записи заранее для клиента", {
         userId,
         message: normalizedSettingsError.message,
       });
@@ -1279,7 +1279,7 @@ async function buildClientBookingView(
   } catch (error) {
     const normalizedError = error as Error;
 
-    dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґРѕСЃС‚СѓРїРЅС‹Рµ СЃР»РѕС‚С‹", {
+    dependencies.logger.warn("Не удалось загрузить доступные слоты", {
       userId,
       message: normalizedError.message,
     });
@@ -1374,7 +1374,7 @@ function getMoscowDateLabel(date: Date): string {
 
 function getMoscowWeekdayIndex(date: Date): number {
   const shifted = new Date(date.getTime() + 3 * 60 * 60 * 1000);
-  return shifted.getUTCDay(); // 0=РІСЃ, 1=РїРЅ ... 6=СЃР±
+  return shifted.getUTCDay(); // 0=вс, 1=пн ... 6=сб
 }
 
 function getMoscowHourOfDay(date: Date): number {
@@ -1793,31 +1793,31 @@ function buildAdminSearchResultKeyboard(): InlineKeyboard {
 }
 
 function buildAdminClosePeriodActionKeyboard(closedPeriods: ClosedPeriodItem[]): InlineKeyboard {
-  const keyboard = new InlineKeyboard().text("Р—Р°РєСЂС‹С‚СЊ РЅРѕРІС‹Р№ РїРµСЂРёРѕРґ", "adm:closeperiod:new").row();
+  const keyboard = new InlineKeyboard().text("Закрыть новый период", "adm:closeperiod:new").row();
 
   for (const period of closedPeriods.slice(0, 12)) {
     const start = new Date(period.startAt);
     const endInclusive = new Date(new Date(period.endAt).getTime() - 1);
-    const label = `РћС‚РјРµРЅРёС‚СЊ: ${slotDateFormatter.format(start)} вЂ” ${slotDateFormatter.format(endInclusive)}`;
+    const label = `Отменить: ${slotDateFormatter.format(start)} — ${slotDateFormatter.format(endInclusive)}`;
     keyboard.text(label, `adm:closeperiod:reopenpick:${start.getTime()}:${new Date(period.endAt).getTime()}`).row();
   }
 
-  keyboard.text("РћР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє", "adm:closeperiod:refresh").row().text("< Р’ РЅР°СЃС‚СЂРѕР№РєРё", "screen:admin-settings");
+  keyboard.text("Обновить список", "adm:closeperiod:refresh").row().text("< В настройки", "screen:admin-settings");
   return keyboard;
 }
 
 function buildAdminClosePeriodStepKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .text("РћС‚РјРµРЅР°", "adm:closeperiod:cancel")
+    .text("Отмена", "adm:closeperiod:cancel")
     .row()
-    .text("< Р’ РЅР°СЃС‚СЂРѕР№РєРё", "screen:admin-settings");
+    .text("< В настройки", "screen:admin-settings");
 }
 
 function buildAdminClosePeriodReasonKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .text("РћС‚РјРµРЅР°", "adm:closeperiod:cancel")
+    .text("Отмена", "adm:closeperiod:cancel")
     .row()
-    .text("< Р’ РЅР°СЃС‚СЂРѕР№РєРё", "screen:admin-settings");
+    .text("< В настройки", "screen:admin-settings");
 }
 
 
@@ -2028,10 +2028,10 @@ async function buildAdminClosePeriodsHubView(
   if (items.length === 0) {
     return {
       text: [
-        "РџР°РЅРµР»СЊ Р°РґРјРёРЅР° > Р—Р°РєСЂС‹С‚РёРµ РїРµСЂРёРѕРґРѕРІ.",
+        "Панель админа > Закрытие периодов.",
         "",
-        "Р—Р°РєСЂС‹С‚С‹С… РїРµСЂРёРѕРґРѕРІ РїРѕРєР° РЅРµС‚.",
-        "РќР°Р¶РјРёС‚Рµ В«Р—Р°РєСЂС‹С‚СЊ РЅРѕРІС‹Р№ РїРµСЂРёРѕРґВ», С‡С‚РѕР±С‹ РґРѕР±Р°РІРёС‚СЊ РїРµСЂРёРѕРґ СЃ РїСЂРёС‡РёРЅРѕР№.",
+        "Закрытых периодов пока нет.",
+        "Нажмите «Закрыть новый период», чтобы добавить период с причиной.",
       ].join("\n"),
       keyboard: buildAdminClosePeriodActionKeyboard(items),
     };
@@ -2040,20 +2040,20 @@ async function buildAdminClosePeriodsHubView(
   const lines = items.slice(0, 12).map((period, index) => {
     const start = new Date(period.startAt);
     const endInclusive = new Date(new Date(period.endAt).getTime() - 1);
-    return `${index + 1}. ${adminDateTimeFormatter.format(start)} вЂ” ${adminDateTimeFormatter.format(endInclusive)} | РїСЂРёС‡РёРЅР°: ${period.reason}`;
+    return `${index + 1}. ${adminDateTimeFormatter.format(start)} — ${adminDateTimeFormatter.format(endInclusive)} | причина: ${period.reason}`;
   });
 
   const hiddenCount = items.length > 12 ? items.length - 12 : 0;
 
   return {
     text: [
-      "РџР°РЅРµР»СЊ Р°РґРјРёРЅР° > Р—Р°РєСЂС‹С‚РёРµ РїРµСЂРёРѕРґРѕРІ.",
+      "Панель админа > Закрытие периодов.",
       "",
-      "РўРµРєСѓС‰РёРµ Р·Р°РєСЂС‹С‚С‹Рµ РїРµСЂРёРѕРґС‹:",
+      "Текущие закрытые периоды:",
       ...lines,
-      hiddenCount > 0 ? `... Рё РµС‰Рµ ${hiddenCount}` : "",
+      hiddenCount > 0 ? `... и еще ${hiddenCount}` : "",
       "",
-      "РќРёР¶Рµ РјРѕР¶РЅРѕ РѕС‚РєСЂС‹С‚СЊ РїРµСЂРёРѕРґ РѕР±СЂР°С‚РЅРѕ РєРЅРѕРїРєРѕР№ В«РћС‚РјРµРЅРёС‚СЊ: ...В».",
+      "Ниже можно открыть период обратно кнопкой «Отменить: ...».",
     ]
       .filter(Boolean)
       .join("\n"),
@@ -2332,7 +2332,7 @@ export function registerNavigationHandler(
           ),
         );
         if (startAt.getTime() < todayStart.getTime()) {
-          await context.reply("РЁР°Рі 1 РёР· 3: РЅРµР»СЊР·СЏ РІС‹Р±СЂР°С‚СЊ РїСЂРѕС€РµРґС€СѓСЋ РґР°С‚Сѓ. РЈРєР°Р¶РёС‚Рµ СЃРµРіРѕРґРЅСЏС€РЅСЋСЋ РёР»Рё Р±СѓРґСѓС‰СѓСЋ.", {
+          await context.reply("Шаг 1 из 3: нельзя выбрать прошедшую дату. Укажите сегодняшнюю или будущую.", {
             reply_markup: buildAdminClosePeriodStepKeyboard(),
           });
           return;
@@ -2345,11 +2345,11 @@ export function registerNavigationHandler(
 
         await context.reply(
           [
-            "РЁР°Рі 1 РІС‹РїРѕР»РЅРµРЅ: РґР°С‚Р° РЅР°С‡Р°Р»Р° РїСЂРёРЅСЏС‚Р°.",
-            `Р”Р°С‚Р° РЅР°С‡Р°Р»Р°: ${adminDateTimeFormatter.format(startAt)} (РњРЎРљ).`,
+            "Шаг 1 выполнен: дата начала принята.",
+            `Дата начала: ${adminDateTimeFormatter.format(startAt)} (МСК).`,
             "",
-            "РЁР°Рі 2 РёР· 3: РІРІРµРґРёС‚Рµ РґР°С‚Сѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РІ С„РѕСЂРјР°С‚Рµ Р”Р”.РњРњ.Р“Р“Р“Р“ (РёР»Рё Р”Р”.РњРњ.Р“Р“).",
-            "Р”Р°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РІРєР»СЋС‡Р°РµС‚СЃСЏ РІ Р·Р°РєСЂС‹С‚С‹Р№ РїРµСЂРёРѕРґ.",
+            "Шаг 2 из 3: введите дату окончания в формате ДД.ММ.ГГГГ (или ДД.ММ.ГГ).",
+            "Дата окончания включается в закрытый период.",
           ].join("\n"),
           {
             reply_markup: buildAdminClosePeriodStepKeyboard(),
@@ -2362,8 +2362,8 @@ export function registerNavigationHandler(
         const endDateParsed = parseMoscowDateInput(rawText);
         if (!endDateParsed.ok) {
           const message = endDateParsed.reason === "format"
-            ? "РЁР°Рі 2 РёР· 3: РІРІРµРґРёС‚Рµ РґР°С‚Сѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РІ С„РѕСЂРјР°С‚Рµ Р”Р”.РњРњ.Р“Р“Р“Р“ (РёР»Рё Р”Р”.РњРњ.Р“Р“), РЅР°РїСЂРёРјРµСЂ 27.05.2026."
-            : "РЁР°Рі 2 РёР· 3: С‚Р°РєРѕР№ РґР°С‚С‹ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚. Р’РІРµРґРёС‚Рµ СЂРµР°Р»СЊРЅСѓСЋ РґР°С‚Сѓ РѕРєРѕРЅС‡Р°РЅРёСЏ, РЅР°РїСЂРёРјРµСЂ 27.05.2026.";
+            ? "Шаг 2 из 3: введите дату окончания в формате ДД.ММ.ГГГГ (или ДД.ММ.ГГ), например 27.05.2026."
+            : "Шаг 2 из 3: такой даты не существует. Введите реальную дату окончания, например 27.05.2026.";
           await context.reply(message, {
             reply_markup: buildAdminClosePeriodStepKeyboard(),
           });
@@ -2372,7 +2372,7 @@ export function registerNavigationHandler(
         const endDate = endDateParsed.date;
 
         if (!closePeriodDraft.startAtIso) {
-          await context.reply("РЎРЅР°С‡Р°Р»Р° СѓРєР°Р¶РёС‚Рµ РґР°С‚Сѓ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°.", {
+          await context.reply("Сначала укажите дату начала периода.", {
             reply_markup: buildAdminClosePeriodStepKeyboard(),
           });
           return;
@@ -2380,7 +2380,7 @@ export function registerNavigationHandler(
 
         const startAt = new Date(closePeriodDraft.startAtIso);
         if (endDate.getTime() < startAt.getTime()) {
-          await context.reply("РЁР°Рі 2 РёР· 3: РґР°С‚Р° РѕРєРѕРЅС‡Р°РЅРёСЏ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ СЂР°РЅСЊС€Рµ РґР°С‚С‹ РЅР°С‡Р°Р»Р°.", {
+          await context.reply("Шаг 2 из 3: дата окончания не может быть раньше даты начала.", {
             reply_markup: buildAdminClosePeriodStepKeyboard(),
           });
           return;
@@ -2395,10 +2395,10 @@ export function registerNavigationHandler(
 
         await context.reply(
           [
-            "РЁР°Рі 2 РІС‹РїРѕР»РЅРµРЅ: РґРёР°РїР°Р·РѕРЅ РїСЂРёРЅСЏС‚.",
-            `РџРµСЂРёРѕРґ: ${adminDateTimeFormatter.format(startAt)} вЂ” ${adminDateTimeFormatter.format(endDate)} (РњРЎРљ).`,
+            "Шаг 2 выполнен: диапазон принят.",
+            `Период: ${adminDateTimeFormatter.format(startAt)} — ${adminDateTimeFormatter.format(endDate)} (МСК).`,
             "",
-            "РЁР°Рі 3 РёР· 3: РѕС‚РїСЂР°РІСЊС‚Рµ РїСЂРёС‡РёРЅСѓ РѕРґРЅРёРј СЃРѕРѕР±С‰РµРЅРёРµРј РІ С‡Р°С‚.",
+            "Шаг 3 из 3: отправьте причину одним сообщением в чат.",
           ].join("\n"),
           {
             reply_markup: buildAdminClosePeriodReasonKeyboard(),
@@ -2409,21 +2409,21 @@ export function registerNavigationHandler(
 
       const reason = rawText.trim();
       if (reason.length < 3) {
-        await context.reply("РџСЂРёС‡РёРЅР° СЃР»РёС€РєРѕРј РєРѕСЂРѕС‚РєР°СЏ. РќР°РїРёС€РёС‚Рµ РјРёРЅРёРјСѓРј 3 СЃРёРјРІРѕР»Р°.", {
+        await context.reply("Причина слишком короткая. Напишите минимум 3 символа.", {
           reply_markup: buildAdminClosePeriodReasonKeyboard(),
         });
         return;
       }
 
       if (!closePeriodDraft.startAtIso) {
-        await context.reply("РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРёС‚Рµ РґР°С‚Сѓ РЅР°С‡Р°Р»Р° РїРµСЂРёРѕРґР°.", {
+        await context.reply("Сначала выберите дату начала периода.", {
           reply_markup: buildAdminClosePeriodStepKeyboard(),
         });
         return;
       }
 
       if (!closePeriodDraft.endAtIso) {
-        await context.reply("РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРёС‚Рµ РґР°С‚Сѓ РѕРєРѕРЅС‡Р°РЅРёСЏ РїРµСЂРёРѕРґР°.", {
+        await context.reply("Сначала выберите дату окончания периода.", {
           reply_markup: buildAdminClosePeriodStepKeyboard(),
         });
         return;
@@ -2445,31 +2445,31 @@ export function registerNavigationHandler(
 
         await context.reply(
           [
-            "РџРµСЂРёРѕРґ Р·Р°РєСЂС‹С‚.",
-            `Р”РёР°РїР°Р·РѕРЅ: ${adminDateTimeFormatter.format(startAt)} вЂ” ${adminDateTimeFormatter.format(endDateInclusive)} (РњРЎРљ).`,
-            `РџСЂРёС‡РёРЅР° РґР»СЏ РєР»РёРµРЅС‚Р°: ${reason}`,
-            `Р—Р°РєСЂС‹С‚Рѕ СЃР»РѕС‚РѕРІ: ${closeResult.closed}.`,
-            closeResult.skippedBooked > 0 ? `РџСЂРѕРїСѓС‰РµРЅРѕ Р·Р°РЅСЏС‚С‹С… СЃР»РѕС‚РѕРІ: ${closeResult.skippedBooked}.` : "",
+            "Период закрыт.",
+            `Диапазон: ${adminDateTimeFormatter.format(startAt)} — ${adminDateTimeFormatter.format(endDateInclusive)} (МСК).`,
+            `Причина для клиента: ${reason}`,
+            `Закрыто слотов: ${closeResult.closed}.`,
+            closeResult.skippedBooked > 0 ? `Пропущено занятых слотов: ${closeResult.skippedBooked}.` : "",
           ]
             .filter(Boolean)
             .join("\n"),
           {
             reply_markup: new InlineKeyboard()
-              .text("Р—Р°РєСЂС‹С‚СЊ РµС‰Рµ РїРµСЂРёРѕРґ", "adm:settings:close-period")
+              .text("Закрыть еще период", "adm:settings:close-period")
               .row()
-              .text("< Р’ РЅР°СЃС‚СЂРѕР№РєРё", "screen:admin-settings"),
+              .text("< В настройки", "screen:admin-settings"),
           },
         );
       } catch (error) {
         const normalizedError = error as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РєСЂС‹С‚СЊ РїРµСЂРёРѕРґ СЃР»РѕС‚РѕРІ", {
+        dependencies.logger.warn("Не удалось закрыть период слотов", {
           userId,
           startAt: closePeriodDraft.startAtIso,
           endAt: closePeriodDraft.endAtIso,
           reason,
           message: normalizedError.message,
         });
-        await context.reply("РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РєСЂС‹С‚СЊ РїРµСЂРёРѕРґ. РџСЂРѕРІРµСЂСЊС‚Рµ API Рё РїРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.", {
+        await context.reply("Не удалось закрыть период. Проверьте API и попробуйте снова.", {
           reply_markup: buildAdminClosePeriodReasonKeyboard(),
         });
       }
@@ -2496,7 +2496,7 @@ export function registerNavigationHandler(
     const query = rawText.trim();
     if (query.length < 2) {
       await context.reply(
-        "Р”Р»СЏ РїРѕРёСЃРєР° РЅСѓР¶РЅРѕ РјРёРЅРёРјСѓРј 2 СЃРёРјРІРѕР»Р°. Р’РІРµРґРёС‚Рµ РёРјСЏ РёР»Рё С‚РµР»РµС„РѕРЅ РєР»РёРµРЅС‚Р°.",
+        "Для поиска нужно минимум 2 символа. Введите имя или телефон клиента.",
         {
           reply_markup: buildAdminSearchModeKeyboard(),
         },
@@ -2511,7 +2511,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ РїРѕРёСЃРє РєР»РёРµРЅС‚Р°", {
+      dependencies.logger.warn("Не удалось выполнить поиск клиента", {
         userId,
         query,
         message: normalizedError.message,
@@ -2543,7 +2543,7 @@ export function registerNavigationHandler(
     adminSlotsTemplateDraftByUser.delete(userId);
 
     if (requestedAdminScreen) {
-      dependencies.logger.info("РџРѕРїС‹С‚РєР° РІС…РѕРґР° РІ Р°РґРјРёРЅСЃРєРёР№ СЂРµР¶РёРј", {
+      dependencies.logger.info("Попытка входа в админский режим", {
         userId,
         username: context.from?.username ?? null,
         role,
@@ -2552,7 +2552,7 @@ export function registerNavigationHandler(
     }
 
     if (!canAccessScreen(role, targetScreen)) {
-      dependencies.logger.warn("РћС€РёР±РєР° РїРµСЂРµС…РѕРґР° РїРѕ РєРЅРѕРїРєРµ", {
+      dependencies.logger.warn("Ошибка перехода по кнопке", {
         userId,
         role,
         targetScreen,
@@ -2595,7 +2595,7 @@ export function registerNavigationHandler(
       } catch (error) {
         const normalizedError = error as Error;
 
-        dependencies.logger.error("РћС€РёР±РєР° РїСЂРѕРІРµСЂРєРё СЂРµРіРёСЃС‚СЂР°С†РёРё РїСЂРё РІС…РѕРґРµ РІ РєР»РёРµРЅС‚СЃРєРёР№ СЌРєСЂР°РЅ", {
+        dependencies.logger.error("Ошибка проверки регистрации при входе в клиентский экран", {
           userId,
           role,
           targetScreen,
@@ -2660,7 +2660,7 @@ export function registerNavigationHandler(
         keyboard = adminSettingsView.keyboard;
       }
 
-      dependencies.logger.info("РћС‚РєСЂС‹С‚ СЌРєСЂР°РЅ", {
+      dependencies.logger.info("Открыт экран", {
         userId,
         role,
         screenId: openedScreen,
@@ -2682,7 +2682,7 @@ export function registerNavigationHandler(
         return;
       }
 
-      dependencies.logger.error("РћС€РёР±РєР° РїРµСЂРµС…РѕРґР° РїРѕ РєРЅРѕРїРєРµ", {
+      dependencies.logger.error("Ошибка перехода по кнопке", {
         userId,
         role,
         targetScreen,
@@ -2767,7 +2767,7 @@ export function registerNavigationHandler(
           await sendOrReplaceAdminNotice(context.api, chatId, notifyText, notifyKeyboard);
         } catch (notifyError) {
           const normalizedNotifyError = notifyError as Error;
-          dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ СѓРІРµРґРѕРјР»РµРЅРёРµ С‚СЂРµРЅРµСЂСѓ Рѕ РЅРѕРІРѕР№ Р·Р°СЏРІРєРµ", {
+          dependencies.logger.warn("Не удалось отправить уведомление тренеру о новой заявке", {
             chatId,
             userId,
             message: normalizedNotifyError.message,
@@ -2786,7 +2786,7 @@ export function registerNavigationHandler(
     } catch (error) {
       const normalizedError = error as Error;
 
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ Р·Р°СЏРІРєСѓ РЅР° СЃР»РѕС‚", {
+      dependencies.logger.warn("Не удалось отправить заявку на слот", {
         userId,
         slotId,
         message: normalizedError.message,
@@ -2835,7 +2835,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РґР°С‚Сѓ СЃР»РѕС‚РѕРІ", {
+      dependencies.logger.warn("Не удалось открыть дату слотов", {
         userId,
         selectedDateKey,
         message: normalizedError.message,
@@ -2907,7 +2907,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ СЃС‚СЂР°РЅРёС†Сѓ РґР°С‚", {
+      dependencies.logger.warn("Не удалось открыть страницу дат", {
         userId,
         requestedPage,
         message: normalizedError.message,
@@ -2956,7 +2956,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ СЃС‚СЂР°РЅРёС†Сѓ РІСЂРµРјРµРЅРё", {
+      dependencies.logger.warn("Не удалось открыть страницу времени", {
         userId,
         dateKey: parsed.dateKey,
         requestedPage: parsed.page,
@@ -3004,7 +3004,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РЅР°СЃС‚СЂРѕР№РєРё РїРµСЂРёРѕРґР° Р·Р°РїРёСЃРё", {
+      dependencies.logger.warn("Не удалось открыть настройки периода записи", {
         userId,
         message: normalizedError.message,
       });
@@ -3050,7 +3050,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РЅР°СЃС‚СЂРѕР№РєСѓ Р·Р°РїРёСЃРё Р·Р°СЂР°РЅРµРµ", {
+      dependencies.logger.warn("Не удалось открыть настройку записи заранее", {
         userId,
         message: normalizedError.message,
       });
@@ -3124,7 +3124,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РїСЂРµСЃРµС‚ РЅР°СЃС‚СЂРѕР№РєРё", {
+      dependencies.logger.warn("Не удалось сохранить пресет настройки", {
         userId,
         field: parsed.field,
         value: parsed.value,
@@ -3161,12 +3161,12 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Черный список" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ С‡РµСЂРЅС‹Р№ СЃРїРёСЃРѕРє", {
+      dependencies.logger.warn("Не удалось открыть черный список", {
         userId,
         message: normalizedError.message,
       });
       await context.answerCallbackQuery({
-        text: "РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ С‡РµСЂРЅС‹Р№ СЃРїРёСЃРѕРє",
+        text: "Не удалось открыть черный список",
         show_alert: true,
       });
     }
@@ -3201,7 +3201,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Открыт список периодов" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ СЂР°Р·РґРµР» Р·Р°РєСЂС‹С‚С‹С… РїРµСЂРёРѕРґРѕРІ", {
+      dependencies.logger.warn("Не удалось открыть раздел закрытых периодов", {
         userId,
         message: normalizedError.message,
       });
@@ -3242,7 +3242,7 @@ export function registerNavigationHandler(
         return;
       }
 
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє Р·Р°РєСЂС‹С‚С‹С… РїРµСЂРёРѕРґРѕРІ", {
+      dependencies.logger.warn("Не удалось обновить список закрытых периодов", {
         userId,
         message: normalizedError.message,
       });
@@ -3275,11 +3275,11 @@ export function registerNavigationHandler(
 
     await context.editMessageText(
       [
-        "РџР°РЅРµР»СЊ Р°РґРјРёРЅР° > Р—Р°РєСЂС‹С‚РёРµ РїРµСЂРёРѕРґРѕРІ.",
+        "Панель админа > Закрытие периодов.",
         "",
-        "Р РµР¶РёРј: Р·Р°РєСЂС‹С‚СЊ РїРµСЂРёРѕРґ.",
-        "РЁР°Рі 1 РёР· 3: РІРІРµРґРёС‚Рµ РґР°С‚Сѓ РЅР°С‡Р°Р»Р° РІ С„РѕСЂРјР°С‚Рµ Р”Р”.РњРњ.Р“Р“Р“Р“ (РёР»Рё Р”Р”.РњРњ.Р“Р“).",
-        "РќР°РїСЂРёРјРµСЂ: 25.05.2026",
+        "Режим: закрыть период.",
+        "Шаг 1 из 3: введите дату начала в формате ДД.ММ.ГГГГ (или ДД.ММ.ГГ).",
+        "Например: 25.05.2026",
       ].join("\n"),
       {
         reply_markup: buildAdminClosePeriodStepKeyboard(),
@@ -3329,7 +3329,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµРЅРёС‚СЊ Р·Р°РєСЂС‹С‚РёРµ РїРѕ РєР°СЂС‚РѕС‡РєРµ", {
+      dependencies.logger.warn("Не удалось отменить закрытие по карточке", {
         userId,
         message: normalizedError.message,
       });
@@ -3723,7 +3723,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Шаблон применен" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРёРјРµРЅРёС‚СЊ С€Р°Р±Р»РѕРЅ СЃР»РѕС‚РѕРІ РЅР° РіРѕСЂРёР·РѕРЅС‚", {
+      dependencies.logger.warn("Не удалось применить шаблон слотов на горизонт", {
         userId,
         message: normalizedError.message,
       });
@@ -3747,7 +3747,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Шаблон отменен" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµРЅРёС‚СЊ СЂРµР¶РёРј С€Р°Р±Р»РѕРЅР°", {
+      dependencies.logger.warn("Не удалось отменить режим шаблона", {
         userId,
         message: normalizedError.message,
       });
@@ -3791,7 +3791,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Выберите дату начала" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РІС‹Р±РѕСЂ РґР°С‚С‹ РЅР°С‡Р°Р»Р° РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось открыть выбор даты начала диапазона", {
         userId,
         page: safePage,
         message: normalizedError.message,
@@ -3840,7 +3840,7 @@ export function registerNavigationHandler(
         return;
       }
 
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕР»РёСЃС‚Р°С‚СЊ РґР°С‚С‹ РЅР°С‡Р°Р»Р° РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось пролистать даты начала диапазона", {
         userId,
         page: safePage,
         message: normalizedError.message,
@@ -3885,7 +3885,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Выберите дату окончания" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РІС‹Р±РѕСЂ РґР°С‚С‹ РѕРєРѕРЅС‡Р°РЅРёСЏ РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось открыть выбор даты окончания диапазона", {
         userId,
         startDateKey,
         message: normalizedError.message,
@@ -3939,7 +3939,7 @@ export function registerNavigationHandler(
         await context.answerCallbackQuery({ text: "Список уже актуален" });
         return;
       }
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕР»РёСЃС‚Р°С‚СЊ РґР°С‚С‹ РѕРєРѕРЅС‡Р°РЅРёСЏ РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось пролистать даты окончания диапазона", {
         userId,
         page: safePage,
         startDateKey: draft.startDateKey,
@@ -4024,7 +4024,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Выберите дату начала" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµР·Р°РїСѓСЃС‚РёС‚СЊ РІС‹Р±РѕСЂ РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось перезапустить выбор диапазона", {
         userId,
         message: normalizedError.message,
       });
@@ -4049,7 +4049,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Массовое изменение отменено" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµРЅРёС‚СЊ СЂРµР¶РёРј РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось отменить режим диапазона", {
         userId,
         message: normalizedError.message,
       });
@@ -4148,7 +4148,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Диапазон обновлен" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРёРјРµРЅРёС‚СЊ РјР°СЃСЃРѕРІРѕРµ РёР·РјРµРЅРµРЅРёРµ РґРёР°РїР°Р·РѕРЅР°", {
+      dependencies.logger.warn("Не удалось применить массовое изменение диапазона", {
         userId,
         action: parsed.action,
         startDateKey: parsed.startDateKey,
@@ -4191,7 +4191,7 @@ export function registerNavigationHandler(
         return;
       }
 
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє РґР°С‚ Рё РІСЂРµРјРµРЅРё", {
+      dependencies.logger.warn("Не удалось обновить список дат и времени", {
         userId,
         page: safePage,
         message: normalizedError.message,
@@ -4236,7 +4236,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Дата открыта" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РґР°С‚Сѓ РІ СЂР°Р·РґРµР»Рµ СЃР»РѕС‚РѕРІ", {
+      dependencies.logger.warn("Не удалось открыть дату в разделе слотов", {
         userId,
         dateKey,
         message: normalizedError.message,
@@ -4330,7 +4330,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Слот обновлен" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРєР»СЋС‡РёС‚СЊ СЃС‚Р°С‚СѓСЃ СЃР»РѕС‚Р° РІ РїР°РЅРµР»Рё РґР°С‚ Рё РІСЂРµРјРµРЅРё", {
+      dependencies.logger.warn("Не удалось переключить статус слота в панели дат и времени", {
         userId,
         dateKey: parsed.dateKey,
         hour: parsed.hour,
@@ -4414,7 +4414,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РёР·РјРµРЅРёС‚СЊ СЃРѕСЃС‚РѕСЏРЅРёРµ РґРЅСЏ РІ РїР°РЅРµР»Рё РґР°С‚ Рё РІСЂРµРјРµРЅРё", {
+      dependencies.logger.warn("Не удалось изменить состояние дня в панели дат и времени", {
         userId,
         action: parsed.action,
         dateKey: parsed.dateKey,
@@ -4511,7 +4511,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Список обновлен" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ С‡РµСЂРЅС‹Р№ СЃРїРёСЃРѕРє", {
+      dependencies.logger.warn("Не удалось обновить черный список", {
         userId,
         message: normalizedError.message,
       });
@@ -4558,13 +4558,13 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РєР»РёРµРЅС‚Р° РёР· С‡РµСЂРЅРѕРіРѕ СЃРїРёСЃРєР°", {
+      dependencies.logger.warn("Не удалось удалить клиента из черного списка", {
         userId,
         clientId,
         message: normalizedError.message,
       });
       await context.answerCallbackQuery({
-        text: "РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РёР· Р§РЎ",
+        text: "Не удалось удалить из ЧС",
         show_alert: true,
       });
     }
@@ -4617,7 +4617,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РєР°СЂС‚РѕС‡РєСѓ Р·Р°СЏРІРєРё", {
+      dependencies.logger.warn("Не удалось открыть карточку заявки", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -4676,7 +4676,7 @@ export function registerNavigationHandler(
         await sendClientCalendarInvite(context.api, result.booking.client.telegramId, result.booking);
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРё", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление о подтверждении", {
           bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -4689,7 +4689,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕРґС‚РІРµСЂРґРёС‚СЊ Р·Р°СЏРІРєСѓ", {
+      dependencies.logger.warn("Не удалось подтвердить заявку", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -4750,7 +4750,7 @@ export function registerNavigationHandler(
         );
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ РѕР± РѕС‚РєР»РѕРЅРµРЅРёРё", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление об отклонении", {
           bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -4763,7 +4763,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєР»РѕРЅРёС‚СЊ Р·Р°СЏРІРєСѓ", {
+      dependencies.logger.warn("Не удалось отклонить заявку", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -4825,7 +4825,7 @@ export function registerNavigationHandler(
         );
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ РѕР± РѕС‚РјРµРЅРµ С‚СЂРµРЅРёСЂРѕРІРєРё", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление об отмене тренировки", {
           bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -4838,7 +4838,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµРЅРёС‚СЊ РїРѕРґС‚РІРµСЂР¶РґРµРЅРЅСѓСЋ С‚СЂРµРЅРёСЂРѕРІРєСѓ", {
+      dependencies.logger.warn("Не удалось отменить подтвержденную тренировку", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -4899,7 +4899,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІС‹РїРѕР»РЅРёС‚СЊ СЂСѓС‡РЅСѓСЋ РїРµСЂРµСЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ РєР°Р»РµРЅРґР°СЂСЏ", {
+      dependencies.logger.warn("Не удалось выполнить ручную пересинхронизацию календаря", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -4974,7 +4974,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РїРµСЂРµРЅРѕСЃ РїРѕРґС‚РІРµСЂР¶РґРµРЅРЅРѕР№ С‚СЂРµРЅРёСЂРѕРІРєРё", {
+      dependencies.logger.warn("Не удалось открыть перенос подтвержденной тренировки", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5052,7 +5052,7 @@ export function registerNavigationHandler(
         }
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ СЂСѓС‡РЅРѕРј Р·Р°РєСЂС‹С‚РёРё Р·Р°СЏРІРєРё", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление о ручном закрытии заявки", {
           bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -5065,7 +5065,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РІСЂСѓС‡РЅСѓСЋ Р·Р°РєСЂС‹С‚СЊ Р·Р°СЏРІРєСѓ", {
+      dependencies.logger.warn("Не удалось вручную закрыть заявку", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5142,7 +5142,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ СЃС‚СЂР°РЅРёС†Сѓ РїРµСЂРµРЅРѕСЃР° РїРѕРґС‚РІРµСЂР¶РґРµРЅРЅРѕР№ С‚СЂРµРЅРёСЂРѕРІРєРё", {
+      dependencies.logger.warn("Не удалось открыть страницу переноса подтвержденной тренировки", {
         userId,
         bookingId: parsed.bookingId,
         page: parsed.page,
@@ -5273,7 +5273,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РІС‹Р±РѕСЂ Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅРѕРіРѕ РІСЂРµРјРµРЅРё", {
+      dependencies.logger.warn("Не удалось открыть выбор альтернативного времени", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5340,7 +5340,7 @@ export function registerNavigationHandler(
         );
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ РїРµСЂРµРЅРѕСЃРµ", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление о переносе", {
           bookingId: parsed.bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -5353,7 +5353,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРµРґР»РѕР¶РёС‚СЊ РґСЂСѓРіРѕРµ РІСЂРµРјСЏ", {
+      dependencies.logger.warn("Не удалось предложить другое время", {
         userId,
         bookingId: parsed.bookingId,
         message: normalizedError.message,
@@ -5421,7 +5421,7 @@ export function registerNavigationHandler(
         );
       } catch (notifyError) {
         const normalizedNotifyError = notifyError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ СѓРІРµРґРѕРјР»РµРЅРёРµ Рѕ РїРµСЂРµРЅРѕСЃРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРЅРѕР№ С‚СЂРµРЅРёСЂРѕРІРєРё", {
+        dependencies.logger.warn("Не удалось отправить клиенту уведомление о переносе подтвержденной тренировки", {
           bookingId: parsed.bookingId,
           clientTelegramId: result.booking.client.telegramId,
           message: normalizedNotifyError.message,
@@ -5434,7 +5434,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРЅРµСЃС‚Рё РїРѕРґС‚РІРµСЂР¶РґРµРЅРЅСѓСЋ С‚СЂРµРЅРёСЂРѕРІРєСѓ", {
+      dependencies.logger.warn("Не удалось перенести подтвержденную тренировку", {
         userId,
         bookingId: parsed.bookingId,
         message: normalizedError.message,
@@ -5477,7 +5477,7 @@ export function registerNavigationHandler(
         return;
       }
 
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє Р·Р°СЏРІРѕРє", {
+      dependencies.logger.warn("Не удалось обновить список заявок", {
         userId,
         message: normalizedError.message,
       });
@@ -5512,7 +5512,7 @@ export function registerNavigationHandler(
         await context.answerCallbackQuery({ text: "Список уже актуален" });
         return;
       }
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃРїРёСЃРѕРє С‚СЂРµРЅРёСЂРѕРІРѕРє РєР»РёРµРЅС‚Р°", {
+      dependencies.logger.warn("Не удалось обновить список тренировок клиента", {
         userId,
         message: normalizedError.message,
       });
@@ -5565,7 +5565,7 @@ export function registerNavigationHandler(
         await context.answerCallbackQuery({ text: "Карточка уже открыта" });
         return;
       }
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РєР°СЂС‚РѕС‡РєСѓ С‚СЂРµРЅРёСЂРѕРІРєРё РєР»РёРµРЅС‚Р°", {
+      dependencies.logger.warn("Не удалось открыть карточку тренировки клиента", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5600,7 +5600,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Запись удалена из списка" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ С‚СЂРµРЅРёСЂРѕРІРєСѓ РёР· РєР»РёРµРЅС‚СЃРєРѕРіРѕ СЃРїРёСЃРєР°", {
+      dependencies.logger.warn("Не удалось удалить тренировку из клиентского списка", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5653,7 +5653,7 @@ export function registerNavigationHandler(
           );
         } catch (notifyError) {
           const normalizedNotifyError = notifyError as Error;
-          dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРІРµРґРѕРјРёС‚СЊ С‚СЂРµРЅРµСЂР° РѕР± РѕС‚РјРµРЅРµ РєР»РёРµРЅС‚РѕРј", {
+          dependencies.logger.warn("Не удалось уведомить тренера об отмене клиентом", {
             bookingId,
             recipient,
             message: normalizedNotifyError.message,
@@ -5667,7 +5667,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РјРµРЅРёС‚СЊ С‚СЂРµРЅРёСЂРѕРІРєСѓ РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось отменить тренировку клиентом", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5725,7 +5725,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РІС‹Р±РѕСЂ РґР°С‚С‹ РґР»СЏ РїРµСЂРµРЅРѕСЃР° РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось открыть выбор даты для переноса клиентом", {
         userId,
         bookingId,
         message: normalizedError.message,
@@ -5774,7 +5774,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Страница обновлена" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕР»РёСЃС‚Р°С‚СЊ РґР°С‚С‹ РїРµСЂРµРЅРѕСЃР° РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось пролистать даты переноса клиентом", {
         userId,
         bookingId: parsed.bookingId,
         page: parsed.page,
@@ -5829,7 +5829,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery();
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РєСЂС‹С‚СЊ РІСЂРµРјСЏ РґР»СЏ РїРµСЂРµРЅРѕСЃР° РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось открыть время для переноса клиентом", {
         userId,
         bookingId: parsed.bookingId,
         dateKey: parsed.dateKey,
@@ -5884,7 +5884,7 @@ export function registerNavigationHandler(
       await context.answerCallbackQuery({ text: "Страница обновлена" });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїСЂРѕР»РёСЃС‚Р°С‚СЊ РІСЂРµРјСЏ РїРµСЂРµРЅРѕСЃР° РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось пролистать время переноса клиентом", {
         userId,
         bookingId: parsed.bookingId,
         dateKey: parsed.dateKey,
@@ -5954,7 +5954,7 @@ export function registerNavigationHandler(
           );
         } catch (notifyError) {
           const normalizedNotifyError = notifyError as Error;
-          dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ СѓРІРµРґРѕРјРёС‚СЊ С‚СЂРµРЅРµСЂР° Рѕ РїРµСЂРµРЅРѕСЃРµ РєР»РёРµРЅС‚РѕРј", {
+          dependencies.logger.warn("Не удалось уведомить тренера о переносе клиентом", {
             bookingId: parsed.bookingId,
             recipient,
             message: normalizedNotifyError.message,
@@ -5966,7 +5966,7 @@ export function registerNavigationHandler(
         await sendClientCalendarInvite(context.api, String(userId), result.booking);
       } catch (inviteError) {
         const normalizedInviteError = inviteError as Error;
-        dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ РїСЂРёРіР»Р°С€РµРЅРёРµ РїРѕСЃР»Рµ РїРµСЂРµРЅРѕСЃР°", {
+        dependencies.logger.warn("Не удалось отправить клиенту приглашение после переноса", {
           bookingId: parsed.bookingId,
           clientTelegramId: String(userId),
           message: normalizedInviteError.message,
@@ -5979,7 +5979,7 @@ export function registerNavigationHandler(
       });
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРЅРµСЃС‚Рё С‚СЂРµРЅРёСЂРѕРІРєСѓ РєР»РёРµРЅС‚РѕРј", {
+      dependencies.logger.warn("Не удалось перенести тренировку клиентом", {
         userId,
         bookingId: parsed.bookingId,
         message: normalizedError.message,
@@ -6031,7 +6031,7 @@ export function registerNavigationHandler(
           await sendOrReplaceAdminNotice(context.api, recipient, trainerNotice);
         } catch (notifyError) {
           const normalizedNotifyError = notifyError as Error;
-          dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ С‚СЂРµРЅРµСЂСѓ СѓРІРµРґРѕРјР»РµРЅРёРµ РѕР± РѕС‚РІРµС‚Рµ РєР»РёРµРЅС‚Р° РЅР° РїСЂРµРґР»РѕР¶РµРЅРёРµ", {
+          dependencies.logger.warn("Не удалось отправить тренеру уведомление об ответе клиента на предложение", {
             recipient,
             bookingId: parsed.bookingId,
             message: normalizedNotifyError.message,
@@ -6055,7 +6055,7 @@ export function registerNavigationHandler(
           await sendClientCalendarInvite(context.api, String(userId), result.booking);
         } catch (notifyError) {
           const normalizedNotifyError = notifyError as Error;
-          dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕС‚РїСЂР°РІРёС‚СЊ РєР»РёРµРЅС‚Сѓ РїСЂРёРіР»Р°С€РµРЅРёРµ РїРѕСЃР»Рµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ РїРµСЂРµРЅРѕСЃР°", {
+          dependencies.logger.warn("Не удалось отправить клиенту приглашение после подтверждения переноса", {
             bookingId: parsed.bookingId,
             clientTelegramId: String(userId),
             message: normalizedNotifyError.message,
@@ -6075,7 +6075,7 @@ export function registerNavigationHandler(
       }
     } catch (error) {
       const normalizedError = error as Error;
-      dependencies.logger.warn("РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РѕС‚РІРµС‚ РєР»РёРµРЅС‚Р° РЅР° РїСЂРµРґР»РѕР¶РµРЅРЅРѕРµ РІСЂРµРјСЏ", {
+      dependencies.logger.warn("Не удалось обработать ответ клиента на предложенное время", {
         userId,
         bookingId: parsed.bookingId,
         message: normalizedError.message,
@@ -6147,7 +6147,7 @@ export function registerNavigationHandler(
         keyboard = adminSettingsView.keyboard;
       }
 
-      dependencies.logger.info("РћС‚РєСЂС‹С‚ СЌРєСЂР°РЅ", {
+      dependencies.logger.info("Открыт экран", {
         userId,
         role,
         screenId: targetScreen,
@@ -6161,7 +6161,7 @@ export function registerNavigationHandler(
     } catch (error) {
       const normalizedError = error as Error;
 
-      dependencies.logger.error("РћС€РёР±РєР° РїРµСЂРµС…РѕРґР° РїРѕ РєРЅРѕРїРєРµ", {
+      dependencies.logger.error("Ошибка перехода по кнопке", {
         userId,
         role,
         action: "back",

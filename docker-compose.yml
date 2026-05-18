@@ -1,7 +1,8 @@
+name: ${COMPOSE_PROJECT_NAME:-tvoy-box-local}
+
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: tvoy-box-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: tvoy_box
@@ -16,3 +17,4 @@ services:
 
 volumes:
   postgres-data:
+    name: ${COMPOSE_PROJECT_NAME:-tvoy-box-local}_postgres_data

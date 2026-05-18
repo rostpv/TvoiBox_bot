@@ -3,6 +3,11 @@ import { Injectable } from "@nestjs/common";
 type RuntimeMode = "development" | "test" | "production";
 type LogLevel = "debug" | "info" | "warn" | "error";
 type CalendarSyncMode = "real" | "mock";
+const TELEGRAM_ID_PLACEHOLDERS = new Set([
+  "123456789",
+  "PUT_ADMIN_TELEGRAM_ID_HERE",
+  "PUT_TRAINER_TELEGRAM_ID_HERE",
+]);
 
 const APP_TIMEZONE = "Europe/Moscow";
 
@@ -22,6 +27,20 @@ function getOptionalEnv(
   source: NodeJS.ProcessEnv = process.env,
 ): string {
   return source[name]?.trim() || fallback;
+}
+
+function getTelegramIdEnv(
+  name: string,
+  fallback: string,
+  source: NodeJS.ProcessEnv = process.env,
+): string {
+  const value = source[name]?.trim();
+
+  if (value && !TELEGRAM_ID_PLACEHOLDERS.has(value)) {
+    return value;
+  }
+
+  return fallback;
 }
 
 function getNumberEnv(
@@ -61,7 +80,8 @@ export interface ApiRuntimeConfig {
 }
 
 export function getApiRuntimeConfig(): ApiRuntimeConfig {
-  const trainerTelegramId = getRequiredEnv("TRAINER_TELEGRAM_ID");
+  const adminTelegramId = getRequiredEnv("ADMIN_TELEGRAM_ID");
+  const trainerTelegramId = getTelegramIdEnv("TRAINER_TELEGRAM_ID", adminTelegramId);
 
   return {
     name: getOptionalEnv("APP_NAME", "tvoy-box-training-scheduler"),
@@ -71,7 +91,7 @@ export function getApiRuntimeConfig(): ApiRuntimeConfig {
     timezone: getOptionalEnv("TZ", APP_TIMEZONE),
     logLevel: getOptionalEnv("API_LOG_LEVEL", "debug") as LogLevel,
     nodeEnv: getOptionalEnv("NODE_ENV", "development") as RuntimeMode,
-    adminTelegramId: getOptionalEnv("ADMIN_TELEGRAM_ID", trainerTelegramId),
+    adminTelegramId,
     trainerTelegramId,
     googleCalendarId: getOptionalEnv("GOOGLE_CALENDAR_ID", "primary"),
     googleServiceAccountEmail: getOptionalEnv("GOOGLE_SERVICE_ACCOUNT_EMAIL", ""),

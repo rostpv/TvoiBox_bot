@@ -4,6 +4,7 @@ dist/
 .turbo/
 .tools/
 .env
+.env.server
 .env.local
 .env.*.local
 coverage/
