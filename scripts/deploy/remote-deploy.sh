@@ -3,6 +3,9 @@ set -euo pipefail
 
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/stack/tvoy-box-bot-deploy}"
 LEGACY_ROOT="${LEGACY_ROOT:-/opt/stack/tvoy-box-bot}"
+BOOTSTRAP_ENV_ROOT="${BOOTSTRAP_ENV_ROOT:-${LEGACY_ROOT}}"
+BOOTSTRAP_SECRETS_ROOT="${BOOTSTRAP_SECRETS_ROOT:-${LEGACY_ROOT}}"
+BOOTSTRAP_LOGS_ROOT="${BOOTSTRAP_LOGS_ROOT:-${LEGACY_ROOT}}"
 RELEASE_NAME="${RELEASE_NAME:?RELEASE_NAME is required}"
 RELEASE_ARCHIVE="${RELEASE_ARCHIVE:?RELEASE_ARCHIVE is required}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
@@ -14,25 +17,28 @@ CURRENT_LINK="${DEPLOY_ROOT}/current"
 
 echo "[auto-deploy] DEPLOY_ROOT=${DEPLOY_ROOT}"
 echo "[auto-deploy] RELEASE_NAME=${RELEASE_NAME}"
+echo "[auto-deploy] BOOTSTRAP_ENV_ROOT=${BOOTSTRAP_ENV_ROOT}"
+echo "[auto-deploy] BOOTSTRAP_SECRETS_ROOT=${BOOTSTRAP_SECRETS_ROOT}"
+echo "[auto-deploy] BOOTSTRAP_LOGS_ROOT=${BOOTSTRAP_LOGS_ROOT}"
 
 mkdir -p "${RELEASES_DIR}" "${SHARED_DIR}/.secrets" "${SHARED_DIR}/logs"
 
-if [[ ! -f "${SHARED_DIR}/.env.server" && -f "${LEGACY_ROOT}/.env.server" ]]; then
+if [[ ! -f "${SHARED_DIR}/.env.server" && -f "${BOOTSTRAP_ENV_ROOT}/.env.server" ]]; then
   echo "[auto-deploy] Bootstrapping shared .env.server from legacy root"
-  cp "${LEGACY_ROOT}/.env.server" "${SHARED_DIR}/.env.server"
+  cp "${BOOTSTRAP_ENV_ROOT}/.env.server" "${SHARED_DIR}/.env.server"
   chmod 600 "${SHARED_DIR}/.env.server"
 fi
 
-if [[ ! -f "${SHARED_DIR}/.secrets/google-service-account.json" && -f "${LEGACY_ROOT}/.secrets/google-service-account.json" ]]; then
+if [[ ! -f "${SHARED_DIR}/.secrets/google-service-account.json" && -f "${BOOTSTRAP_SECRETS_ROOT}/.secrets/google-service-account.json" ]]; then
   echo "[auto-deploy] Bootstrapping Google service account JSON from legacy root"
-  cp "${LEGACY_ROOT}/.secrets/google-service-account.json" "${SHARED_DIR}/.secrets/google-service-account.json"
+  cp "${BOOTSTRAP_SECRETS_ROOT}/.secrets/google-service-account.json" "${SHARED_DIR}/.secrets/google-service-account.json"
   chmod 600 "${SHARED_DIR}/.secrets/google-service-account.json"
 fi
 
-if [[ ! -d "${SHARED_DIR}/logs/api" && -d "${LEGACY_ROOT}/logs" ]]; then
+if [[ ! -d "${SHARED_DIR}/logs/api" && -d "${BOOTSTRAP_LOGS_ROOT}/logs" ]]; then
   echo "[auto-deploy] Bootstrapping shared logs directory from legacy root"
   mkdir -p "${SHARED_DIR}/logs"
-  cp -a "${LEGACY_ROOT}/logs/." "${SHARED_DIR}/logs/" || true
+  cp -a "${BOOTSTRAP_LOGS_ROOT}/logs/." "${SHARED_DIR}/logs/" || true
 fi
 
 if [[ ! -f "${SHARED_DIR}/.env.server" ]]; then
