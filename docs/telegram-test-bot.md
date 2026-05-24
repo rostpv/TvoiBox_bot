@@ -33,6 +33,8 @@ BOT_DELIVERY_MODE=polling
 
 BOT_MINI_APP_URL=https://app.anyatobolova.ru/
 BOT_MINI_APP_LABEL=Открыть mini app
+BOT_MINI_APP_TRAINER_URL=https://app.anyatobolova.ru/?dev=trainer
+BOT_MINI_APP_TRAINER_LABEL=Открыть тренерский экран
 ```
 
 Дополнительно:
@@ -121,6 +123,7 @@ bash scripts/deploy/stop-dev-test-bot.sh
 
 1. Через кодовую кнопку `/start` и `/miniapp`.
    Этот вариант уже подготовлен в репозитории и управляется env-переменной `BOT_MINI_APP_URL`.
+   Для отдельной тренерской кнопки можно задать `BOT_MINI_APP_TRAINER_URL`.
 
 2. Через BotFather menu button / Web App.
    Это можно включить дополнительно позже, если понадобится постоянная кнопка открытия mini app внизу чата.

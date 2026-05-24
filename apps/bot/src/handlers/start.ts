@@ -18,13 +18,19 @@ interface StartHandlerDependencies {
 
 function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {
   const miniAppUrl = config.miniAppUrl.trim();
+  const trainerMiniAppUrl = config.miniAppTrainerUrl.trim();
 
   if (!miniAppUrl) {
     return null;
   }
 
   return {
-    inline_keyboard: [[{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }]],
+    inline_keyboard: [
+      [{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }],
+      ...(trainerMiniAppUrl
+        ? [[{ text: config.miniAppTrainerLabel, web_app: { url: trainerMiniAppUrl } }]]
+        : []),
+    ],
   };
 }
 

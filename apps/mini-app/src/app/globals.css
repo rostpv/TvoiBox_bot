@@ -1083,9 +1083,10 @@ a {
 }
 
 .hero-card-compact {
-  padding: 18px;
+  padding: 16px;
   border-radius: 24px;
   overflow: hidden;
+  position: relative;
 }
 
 .hero-card-compact::after {
@@ -1096,10 +1097,7 @@ a {
 }
 
 .hero-card-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
+  display: block;
 }
 
 .hero-label {
@@ -1111,6 +1109,9 @@ a {
 }
 
 .hero-avatar-frame {
+  position: absolute;
+  right: 16px;
+  top: 16px;
   width: 82px;
   height: 82px;
   border-radius: 22px;
@@ -1129,8 +1130,8 @@ a {
 }
 
 .hero-copy-compact {
-  max-width: 420px;
-  margin-top: 10px;
+  max-width: calc(100% - 116px);
+  margin-top: 4px;
 }
 
 .hero-title-compact {
@@ -1609,11 +1610,9 @@ a {
     padding: 14px;
   }
 
-  .hero-card-top {
-    gap: 12px;
-  }
-
   .hero-avatar-frame {
+    right: 14px;
+    top: 14px;
     width: 68px;
     height: 68px;
     border-radius: 20px;
@@ -1621,7 +1620,7 @@ a {
 
   .hero-copy-compact {
     margin-top: 6px;
-    max-width: 100%;
+    max-width: calc(100% - 88px);
   }
 
   .hero-title-compact {
