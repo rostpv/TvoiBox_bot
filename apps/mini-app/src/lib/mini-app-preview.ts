@@ -699,20 +699,20 @@ export class MiniAppPreviewRuntime {
   downloadTrainerBookingCalendarFile(token: string, bookingId: string): Blob {
     const session = getSessionFromToken(token);
     if (session.role !== "trainer") {
-      throw new Error("Р”РѕСЃС‚СѓРї РґРѕСЃС‚СѓРїРµРЅ С‚РѕР»СЊРєРѕ С‚СЂРµРЅРµСЂСѓ.");
+      throw new Error("Доступ разрешён только тренеру.");
     }
 
     const state = readPreviewState();
     const booking = state.bookings.find((item) => item.id === bookingId && !item.archivedByTrainer);
     if (!booking) {
-      throw new Error("Р—Р°СЏРІРєР° РЅРµ РЅР°Р№РґРµРЅР°.");
+      throw new Error("Заявка не найдена.");
     }
 
     if (["CANCELLED", "REJECTED", "EXPIRED"].includes(booking.status)) {
-      throw new Error("Р”Р»СЏ СЌС‚РѕР№ Р·Р°СЏРІРєРё РєР°Р»РµРЅРґР°СЂРЅС‹Р№ С„Р°Р№Р» РЅРµ РґРѕСЃС‚СѓРїРµРЅ.");
+      throw new Error("Для этой заявки календарный файл недоступен.");
     }
 
-    return createCalendarBlob("РўРІРѕР№ Р‘РѕРєСЃ — Р·Р°СЏРІРєР° РЅР° С‚СЂРµРЅРёСЂРѕРІРєСѓ", booking.startAt, booking.endAt);
+    return createCalendarBlob("Твой Бокс — заявка на тренировку", booking.startAt, booking.endAt);
   }
 
   requestBooking(token: string, payload: { slotId: string; clientComment?: string | null }): CreateBookingResponse {

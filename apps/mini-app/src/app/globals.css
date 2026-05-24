@@ -770,8 +770,8 @@ a {
 
 .summary-card {
   display: grid;
-  gap: 4px;
-  padding: 14px 16px;
+  gap: 3px;
+  padding: 12px 14px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.88);
@@ -779,7 +779,7 @@ a {
 
 .summary-card strong {
   font-family: var(--font-heading);
-  font-size: 21px;
+  font-size: 18px;
   line-height: 1.05;
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -787,7 +787,7 @@ a {
 
 .summary-card span {
   color: rgba(24, 21, 21, 0.46);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
 }
 
@@ -1011,18 +1011,18 @@ a {
 }
 
 .trainer-thought-title {
-  max-width: 620px;
+  max-width: 560px;
   color: #111111;
-  font-size: clamp(26px, 3vw, 42px);
-  line-height: 1.03;
+  font-size: clamp(22px, 2.6vw, 34px);
+  line-height: 1.02;
 }
 
 .trainer-thought-lead {
-  max-width: 520px;
-  margin-top: 18px;
+  max-width: 460px;
+  margin-top: 12px;
   color: #5f5f5f;
-  font-size: 15px;
-  line-height: 1.58;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .trainer-thought-panel {
@@ -1050,14 +1050,14 @@ a {
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
   gap: 8px;
-  margin-top: 10px;
-  max-width: 310px;
+  margin-top: 8px;
+  max-width: 290px;
   justify-content: start;
 }
 
 .trainer-thought-card {
   min-width: 0;
-  padding: 10px 12px 11px;
+  padding: 9px 11px 10px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.74);
   border: 1px solid rgba(21, 21, 21, 0.06);
@@ -1070,7 +1070,7 @@ a {
 }
 
 .trainer-thought-card strong {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.18;
   font-weight: 600;
 }
@@ -1078,12 +1078,12 @@ a {
 .trainer-thought-card span {
   order: -1;
   color: rgba(24, 21, 21, 0.42);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
 }
 
 .hero-card-compact {
-  padding: 16px;
+  padding: 14px;
   border-radius: 24px;
   overflow: hidden;
   position: relative;
@@ -1097,7 +1097,11 @@ a {
 }
 
 .hero-card-top {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .hero-label {
@@ -1109,16 +1113,14 @@ a {
 }
 
 .hero-avatar-frame {
-  position: absolute;
-  right: 16px;
-  top: 16px;
-  width: 82px;
-  height: 82px;
-  border-radius: 22px;
+  position: static;
+  width: 76px;
+  height: 76px;
+  border-radius: 20px;
   overflow: hidden;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 239, 231, 0.96));
   border: 1px solid rgba(24, 21, 21, 0.05);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
 }
 
@@ -1130,50 +1132,50 @@ a {
 }
 
 .hero-copy-compact {
-  max-width: calc(100% - 116px);
-  margin-top: 4px;
+  max-width: 100%;
+  margin-top: 0;
 }
 
 .hero-title-compact {
   margin: 0;
-  max-width: 290px;
+  max-width: 320px;
   color: #111111;
-  font-size: clamp(24px, 3.4vw, 29px);
+  font-size: clamp(22px, 3vw, 27px);
   line-height: 1.05;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
 .hero-lead-compact {
-  max-width: 390px;
+  max-width: 360px;
   margin-top: 8px;
   margin-bottom: 0;
   color: #666666;
-  font-size: 14px;
-  line-height: 1.48;
+  font-size: 13px;
+  line-height: 1.45;
   font-weight: 500;
 }
 
 .home-actions-grid-compact {
-  gap: 10px;
+  gap: 8px;
 }
 
 .home-actions-grid-compact .action-card-home {
   min-height: 0;
-  gap: 8px;
-  padding: 14px;
+  gap: 6px;
+  padding: 12px;
   align-content: start;
 }
 
 .home-actions-grid-compact .action-card strong {
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.08;
   font-family: var(--font-heading);
 }
 
 .home-actions-grid-compact .action-card p {
-  font-size: 13px;
-  line-height: 1.42;
+  font-size: 12px;
+  line-height: 1.36;
   color: #666666;
 }
 
@@ -1197,13 +1199,13 @@ a {
 }
 
 .booking-panel {
-  padding: 18px;
+  padding: 16px;
 }
 
 .booking-header {
   display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 14px;
 }
 
 .back-link {
@@ -1218,7 +1220,7 @@ a {
 
 .booking-panel .panel-title,
 .no-slot-panel .panel-title {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: -0.03em;
@@ -1227,8 +1229,8 @@ a {
 .booking-panel .panel-text,
 .no-slot-panel .panel-text {
   color: #666666;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.52;
 }
 
 .booking-rules-note {
@@ -1337,19 +1339,19 @@ a {
 }
 
 .no-slot-panel {
-  margin-top: 10px;
-  padding: 16px;
+  margin-top: 8px;
+  padding: 14px;
   border-radius: 24px;
   border: 1px solid rgba(0, 0, 0, 0.05);
   background: #ffffff;
 }
 
 .no-slot-header {
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .no-slot-step {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .step-label {
@@ -1363,9 +1365,9 @@ a {
 }
 
 .step-title {
-  margin: 0 0 10px;
+  margin: 0 0 8px;
   color: #111111;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
 }
 
@@ -1375,13 +1377,13 @@ a {
 
 .chip-button-soft {
   width: fit-content;
-  height: 36px;
-  padding: 0 16px;
+  height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
   background: #f6f6f6;
   border: 1px solid transparent;
   color: #222222;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   transition: all 0.25s ease;
 }
@@ -1408,7 +1410,7 @@ a {
 }
 
 .workout-card {
-  padding: 14px;
+  padding: 12px;
   border-radius: 22px;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1433,7 +1435,7 @@ a {
 .workout-card__date,
 .workout-card__time {
   color: #111111;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.05;
 }
@@ -1470,9 +1472,9 @@ a {
 }
 
 .workout-card__comment {
-  margin: 4px 0 12px;
+  margin: 4px 0 10px;
   color: #666666;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
@@ -1483,10 +1485,10 @@ a {
 }
 
 .action-btn {
-  min-height: 36px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 11px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   border: 1px solid rgba(0, 0, 0, 0.08);
   background: #f5f5f5;
@@ -1494,13 +1496,13 @@ a {
 }
 
 .calendar-icon-button {
-  width: 36px;
-  min-width: 36px;
-  height: 36px;
-  min-height: 36px;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
   padding: 0;
   border-radius: 999px;
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -1603,36 +1605,39 @@ a {
   }
 
   .hero-card {
-    padding: 14px;
+    padding: 12px;
   }
 
   .hero-card-compact {
-    padding: 14px;
+    padding: 12px;
+  }
+
+  .hero-card-top {
+    gap: 10px;
+    margin-bottom: 8px;
   }
 
   .hero-avatar-frame {
-    right: 14px;
-    top: 14px;
-    width: 68px;
-    height: 68px;
-    border-radius: 20px;
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
   }
 
   .hero-copy-compact {
-    margin-top: 6px;
-    max-width: calc(100% - 88px);
+    margin-top: 0;
+    max-width: 100%;
   }
 
   .hero-title-compact {
-    max-width: 220px;
-    font-size: 18px;
+    max-width: 230px;
+    font-size: 17px;
     line-height: 1.04;
   }
 
   .hero-lead-compact {
     margin-top: 6px;
-    font-size: 12px;
-    line-height: 1.4;
+    font-size: 11px;
+    line-height: 1.36;
   }
 
   .hero-grid {
@@ -1813,19 +1818,19 @@ a {
 
   .booking-panel,
   .no-slot-panel {
-    padding: 14px;
+    padding: 12px;
   }
 
   .booking-panel .panel-title,
   .no-slot-panel .panel-title {
-    font-size: 20px;
+    font-size: 18px;
   }
 
   .booking-panel .panel-text,
   .booking-rules-note,
   .no-slot-panel .panel-text {
-    font-size: 13px;
-    line-height: 1.48;
+    font-size: 12px;
+    line-height: 1.42;
   }
 
   .back-link {
@@ -1840,9 +1845,9 @@ a {
   }
 
   .chip-button-soft {
-    height: 34px;
-    padding: 0 14px;
-    font-size: 13px;
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
   .booking-submit-button,
@@ -1852,17 +1857,17 @@ a {
   }
 
   .workout-card {
-    padding: 12px;
+    padding: 10px;
     border-radius: 18px;
   }
 
   .workout-card__date,
   .workout-card__time {
-    font-size: 16px;
+    font-size: 15px;
   }
 
   .workout-card__comment {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .workout-card__actions {
@@ -1870,17 +1875,17 @@ a {
   }
 
   .action-btn {
-    min-height: 34px;
-    padding: 0 11px;
-    font-size: 12px;
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 
   .calendar-icon-button {
-    width: 34px;
-    min-width: 34px;
-    height: 34px;
-    min-height: 34px;
-    font-size: 15px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    font-size: 14px;
   }
 
   .loader-state-compact strong {
@@ -1979,17 +1984,17 @@ a {
   }
 
   .summary-card {
-    padding: 14px;
+    padding: 10px 11px;
     border-radius: 18px;
   }
 
   .summary-card strong {
-    font-size: 24px;
+    font-size: 16px;
   }
 
   .summary-card span {
-    font-size: 14px;
-    line-height: 1.4;
+    font-size: 10px;
+    line-height: 1.35;
   }
 
   .panel-subsection {
@@ -2041,13 +2046,13 @@ a {
   }
 
   .trainer-thought-title {
-    font-size: 36px;
+    font-size: 19px;
     line-height: 1.05;
   }
 
   .trainer-thought-lead {
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 11px;
+    line-height: 1.42;
   }
 
   .trainer-thought-cards {
