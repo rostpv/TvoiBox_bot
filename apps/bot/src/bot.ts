@@ -79,6 +79,7 @@ export function createBot(token: string, dependencies: CreateBotDependencies) {
   });
 
   registerStartHandler(bot, {
+    config: dependencies.config,
     logger: dependencies.logger,
     navigationService,
     registrationService,

@@ -1,21 +1,51 @@
-﻿import { InlineKeyboard, Keyboard } from "grammy";
+import { InlineKeyboard, Keyboard } from "grammy";
 import type { Bot, Context } from "grammy";
 
 import type { LoggerLike } from "../common/logger-like";
+import type { BotRuntimeConfig } from "../config/bot-config";
 import { buildScreenView } from "../menus/main-menu";
 import { NavigationService } from "../services/navigation-service";
 import { RegistrationService } from "../services/registration-service";
 import type { ScreenId, UserRole } from "../services/screen-service";
 
 interface StartHandlerDependencies {
+  config: BotRuntimeConfig;
   logger: LoggerLike;
   navigationService: NavigationService;
   registrationService: RegistrationService;
   resolveRole(userId: number): UserRole;
 }
 
-function buildClientWelcomeMessage(fullName?: string | null) {
+function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {
+  const miniAppUrl = config.miniAppUrl.trim();
+
+  if (!miniAppUrl) {
+    return null;
+  }
+
+  return {
+    inline_keyboard: [[{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }]],
+  };
+}
+
+function buildMiniAppReplyKeyboard(config: BotRuntimeConfig) {
+  const miniAppUrl = config.miniAppUrl.trim();
+
+  if (!miniAppUrl) {
+    return null;
+  }
+
+  return {
+    keyboard: [[{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }]],
+    resize_keyboard: true,
+    is_persistent: true,
+  };
+}
+
+function buildClientWelcomeMessage(config: BotRuntimeConfig, fullName?: string | null) {
   const greeting = fullName?.trim() ? `Привет, ${fullName.trim()}!` : "Привет!";
+  const miniAppInlineKeyboard = buildMiniAppInlineKeyboard(config);
+  const miniAppReplyKeyboard = buildMiniAppReplyKeyboard(config);
 
   return {
     welcomeText: [
@@ -26,16 +56,24 @@ function buildClientWelcomeMessage(fullName?: string | null) {
       "",
       "Здесь можно записаться на индивидуальные тренировки к тренеру Ростиславу, посмотреть свои записи и быстро связаться с тренером по удобному времени.",
     ].join("\n"),
-    actionText: "Нажми кнопку Старт ниже, чтобы открыть меню.",
-    inlineKeyboard: new InlineKeyboard().text("Старт", "screen:client-main"),
-    replyKeyboard: new Keyboard().text("Старт").resized().persistent(),
+    actionText: miniAppInlineKeyboard
+      ? "Нажми кнопку mini app ниже, чтобы открыть web-интерфейс, или Старт, чтобы остаться в сценарии бота."
+      : "Нажми кнопку Старт ниже, чтобы открыть меню.",
+    inlineKeyboard: miniAppInlineKeyboard ?? new InlineKeyboard().text("Старт", "screen:client-main"),
+    replyKeyboard: miniAppReplyKeyboard ?? new Keyboard().text("Старт").resized().persistent(),
   };
 }
 
-function buildAdminStartPrompt() {
+function buildAdminStartPrompt(config: BotRuntimeConfig) {
+  const miniAppInlineKeyboard = buildMiniAppInlineKeyboard(config);
+  const miniAppReplyKeyboard = buildMiniAppReplyKeyboard(config);
+
   return {
-    text: "Тренерский режим. Кнопка Старт внизу чата возвращает в главное меню.",
-    replyKeyboard: new Keyboard().text("Старт").resized().persistent(),
+    text: miniAppReplyKeyboard
+      ? "Тренерский режим. Можно открыть mini app кнопкой внизу чата или вернуться в меню бота по кнопке Старт."
+      : "Тренерский режим. Кнопка Старт внизу чата возвращает в главное меню.",
+    inlineKeyboard: miniAppInlineKeyboard,
+    replyKeyboard: miniAppReplyKeyboard ?? new Keyboard().text("Старт").resized().persistent(),
   };
 }
 
@@ -119,7 +157,7 @@ async function handleStart(
   });
 
   if (role === "client") {
-    const welcome = buildClientWelcomeMessage(clientFullName);
+    const welcome = buildClientWelcomeMessage(dependencies.config, clientFullName);
 
     await context.reply(welcome.welcomeText, {
       reply_markup: welcome.replyKeyboard,
@@ -131,10 +169,16 @@ async function handleStart(
     return;
   }
 
-  const adminPrompt = buildAdminStartPrompt();
+  const adminPrompt = buildAdminStartPrompt(dependencies.config);
   await context.reply(adminPrompt.text, {
     reply_markup: adminPrompt.replyKeyboard,
   });
+
+  if (adminPrompt.inlineKeyboard) {
+    await context.reply("Быстрый вход в mini app:", {
+      reply_markup: adminPrompt.inlineKeyboard,
+    });
+  }
 
   const startMessage = buildStartMessage(role, rootScreen);
   await context.reply(startMessage.text, {
@@ -145,6 +189,19 @@ async function handleStart(
 export function registerStartHandler(bot: Bot<Context>, dependencies: StartHandlerDependencies) {
   bot.command("start", async (context) => {
     await handleStart(context, dependencies, "/start");
+  });
+
+  bot.command("miniapp", async (context) => {
+    const inlineKeyboard = buildMiniAppInlineKeyboard(dependencies.config);
+
+    if (!inlineKeyboard) {
+      await context.reply("Ссылка mini app для этого бота пока не настроена.");
+      return;
+    }
+
+    await context.reply("Открыть mini app:", {
+      reply_markup: inlineKeyboard,
+    });
   });
 
   bot.hears(/^start$/iu, async (context) => {

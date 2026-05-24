@@ -89,6 +89,8 @@ export interface BotRuntimeConfig {
   deliveryMode: BotDeliveryMode;
   dryRun: boolean;
   logLevel: LogLevel;
+  miniAppLabel: string;
+  miniAppUrl: string;
   nodeEnv: RuntimeMode;
   telegramBotToken: string;
   trainerTelegramId: string;
@@ -112,6 +114,8 @@ export function getBotRuntimeConfig(): BotRuntimeConfig {
     deliveryMode,
     dryRun: getBooleanEnv("BOT_DRY_RUN", true),
     logLevel: getOptionalEnv("BOT_LOG_LEVEL", "debug") as LogLevel,
+    miniAppLabel: getOptionalEnv("BOT_MINI_APP_LABEL", "Открыть mini app"),
+    miniAppUrl: getOptionalEnv("BOT_MINI_APP_URL", ""),
     nodeEnv: getOptionalEnv("NODE_ENV", "development") as RuntimeMode,
     telegramBotToken: getRequiredEnv("TELEGRAM_BOT_TOKEN"),
     trainerTelegramId: getTelegramIdEnv("TRAINER_TELEGRAM_ID", adminTelegramId),
