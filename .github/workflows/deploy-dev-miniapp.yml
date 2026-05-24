@@ -87,7 +87,21 @@ jobs:
             DEPLOY_WITH_BOT='${DEPLOY_WITH_BOT}' \
             /bin/bash /tmp/remote-deploy.sh"
 
-      - name: Verify dev API health endpoint
+      - name: Verify dev contour from VPS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -p "$VPS_PORT" "${VPS_USER}@${VPS_HOST}" "\
+            curl -fsSL 'http://127.0.0.1:3310/health' && \
+            curl -I -fsSL 'http://127.0.0.1:3312/' && \
+            curl -fsSL '${DEV_HEALTHCHECK_URL}' && \
+            curl -I -fsSL '${DEV_APP_URL}'"
+
+      - name: Diagnostic: verify dev API health endpoint from GitHub runner
+        continue-on-error: true
         shell: bash
         run: |
           for attempt in {1..12}; do
@@ -100,7 +114,8 @@ jobs:
           echo "[verify] API health check failed after retries"
           exit 1
 
-      - name: Verify dev mini app root
+      - name: Diagnostic: verify dev mini app root from GitHub runner
+        continue-on-error: true
         shell: bash
         run: |
           for attempt in {1..12}; do
