@@ -36,13 +36,19 @@ function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {
 
 function buildMiniAppReplyKeyboard(config: BotRuntimeConfig) {
   const miniAppUrl = config.miniAppUrl.trim();
+  const trainerMiniAppUrl = config.miniAppTrainerUrl.trim();
 
   if (!miniAppUrl) {
     return null;
   }
 
   return {
-    keyboard: [[{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }]],
+    keyboard: [
+      [{ text: config.miniAppLabel, web_app: { url: miniAppUrl } }],
+      ...(trainerMiniAppUrl
+        ? [[{ text: config.miniAppTrainerLabel, web_app: { url: trainerMiniAppUrl } }]]
+        : []),
+    ],
     resize_keyboard: true,
     is_persistent: true,
   };
