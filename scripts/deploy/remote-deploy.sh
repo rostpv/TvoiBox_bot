@@ -96,11 +96,14 @@ if [[ -f "${RELEASE_ARCHIVE}" ]]; then
   rm -f "${RELEASE_ARCHIVE}"
 fi
 
-mapfile -t OLD_RELEASES < <(find "${RELEASES_DIR}" -mindepth 1 -maxdepth 1 -type d | sort)
+mapfile -t OLD_RELEASES < <(find "${RELEASES_DIR}" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %p\n' | sort -n | awk '{print $2}')
 
 if (( ${#OLD_RELEASES[@]} > KEEP_RELEASES )); then
   REMOVE_COUNT=$(( ${#OLD_RELEASES[@]} - KEEP_RELEASES ))
   for ((i=0; i<REMOVE_COUNT; i++)); do
+    if [[ "${OLD_RELEASES[$i]}" == "${RELEASE_DIR}" ]]; then
+      continue
+    fi
     rm -rf "${OLD_RELEASES[$i]}"
   done
 fi
