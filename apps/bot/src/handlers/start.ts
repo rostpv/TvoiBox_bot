@@ -17,11 +17,13 @@ interface StartHandlerDependencies {
 }
 
 function getClientMiniAppLabel(config: BotRuntimeConfig) {
-  return config.miniAppLabel.trim() || "Открыть mini app";
+  void config;
+  return "Открыть mini app";
 }
 
 function getTrainerMiniAppLabel(config: BotRuntimeConfig) {
-  return config.miniAppTrainerLabel.trim() || "Открыть тренерский экран";
+  void config;
+  return "Открыть тренерский экран";
 }
 
 function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {

@@ -156,7 +156,7 @@ function getNextFullHour(): Date {
 
 function buildDefaultRange(): SlotRangeState {
   const start = getNextFullHour();
-  const end = new Date(start.getTime() + 7 * DAY_MS);
+  const end = new Date(start.getTime() + 14 * DAY_MS);
   return {
     from: toLocalDateTimeInputValue(start),
     to: toLocalDateTimeInputValue(end),
@@ -249,6 +249,21 @@ function RefreshIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
         d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function ArrowLeftIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M15 18l-6-6 6-6M9 12h11"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
@@ -423,31 +438,32 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
     onRefresh?: () => void,
     extraAction?: ReactNode,
   ) {
-    return (
-      <div className="panel-header panel-header-compact panel-header-slim">
-        <div>
-          <button className="back-link back-link-inline" disabled={isBusy} onClick={onBack}>
-            ← Назад
-          </button>
-          <h2 className="panel-title">{title}</h2>
-          <p className="panel-text">{text}</p>
-        </div>
-        <div className="panel-header-actions">
-          {onRefresh ? (
-            <button
-              className="secondary-button secondary-button-compact icon-button-compact"
-              aria-label={`Обновить раздел ${title}`}
-              title="Обновить"
+      return (
+        <div className="panel-header panel-header-compact panel-header-slim">
+          <div className="panel-header-copy panel-header-copy-wide">
+            <button className="back-link back-link-inline back-link-icon" disabled={isBusy} onClick={onBack}>
+              <ArrowLeftIcon />
+              <span>Назад</span>
+            </button>
+            <h2 className="panel-title">{title}</h2>
+            <p className="panel-text">{text}</p>
+          </div>
+          <div className="panel-header-actions">
+            {extraAction}
+            {onRefresh ? (
+              <button
+                className="secondary-button secondary-button-compact icon-button-compact"
+                aria-label={`Обновить раздел ${title}`}
+                title="Обновить"
               disabled={isBusy}
               onClick={onRefresh}
             >
               <RefreshIcon />
-            </button>
-          ) : null}
-          {extraAction}
+              </button>
+            ) : null}
+          </div>
         </div>
-      </div>
-    );
+      );
   }
 
   async function runTask(task: () => Promise<void>, successMessage?: string) {
@@ -953,7 +969,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
 
         {screen === "home" ? (
           <>
-            <section className="hero-card">
+            <section className="hero-card trainer-hero-card">
               <div className="trainer-hero-grid">
                 <div className="trainer-hero-copy">
                   <h1 className="hero-title trainer-thought-title">
@@ -1186,24 +1202,34 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                 <span>Новые заявки и переносы сразу появятся здесь.</span>
               </div>
             ) : (
-              <div className="record-list trainer-record-list">
+                <div className="record-list trainer-record-list">
                 {visibleBookings.map((item) => (
-                    <article className="record-card workout-card" key={item.id}>
+                    <article className="record-card workout-card trainer-workout-card" key={item.id}>
                       <div className="record-card-head workout-card__head">
-                        <div>
-                          <div className="workout-card__top">
-                            <span className="workout-card__date">{formatShortDate(item.slot.startAt)}</span>
-                            <span className="workout-card__time">{formatTime(item.slot.startAt)}</span>
-                          </div>
-                          <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                        <div className="workout-card__top">
+                          <span className="workout-card__date">{formatShortDate(item.slot.startAt)}</span>
+                          <span className="workout-card__time">{formatTime(item.slot.startAt)}</span>
                         </div>
-                        <span className="status-pill workout-card__status" data-tone={getBookingTone(item.status)}>
-                          {getBookingStatusLabel(item.status)}
-                        </span>
+                        <div className="record-card-head-actions">
+                          <a
+                            className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                            href={getClientContactHref(item.client)}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label="Написать клиенту в Telegram"
+                            title="Написать клиенту в Telegram"
+                          >
+                            <TelegramIcon />
+                          </a>
+                        </div>
                       </div>
 
-                    {item.clientComment ? <p className="record-comment">Комментарий клиента: {item.clientComment}</p> : null}
-                    {item.trainerComment ? <p className="record-comment">Комментарий тренера: {item.trainerComment}</p> : null}
+                    <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                    <div className="workout-card__status" data-tone={getBookingTone(item.status)}>
+                      {getBookingStatusLabel(item.status)}
+                    </div>
+                    {item.clientComment ? <p className="workout-card__comment">Комментарий клиента: {item.clientComment}</p> : null}
+                    {item.trainerComment ? <p className="workout-card__comment">Комментарий тренера: {item.trainerComment}</p> : null}
 
                     {bookingProposalOpen[item.id] ? (
                       <div className="form-grid compact-stack">
@@ -1227,16 +1253,6 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                     ) : null}
 
                     <div className="record-actions workout-card__actions">
-                      <a
-                        className="action-btn action-btn--secondary action-btn--icon"
-                        href={getClientContactHref(item.client)}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label="Написать клиенту в Telegram"
-                        title="Написать клиенту в Telegram"
-                      >
-                        <TelegramIcon />
-                      </a>
                       <button className="action-btn action-btn--secondary" disabled={isBusy} onClick={() => void handleConfirmBooking(item.id)}>
                         Подтвердить
                       </button>
@@ -1290,10 +1306,12 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               ) : (
                 <div className="record-list trainer-no-slot-list">
                   {activeNoSlotRequests.map((item) => (
-                    <article className="record-card" key={item.id}>
+                    <article className="record-card workout-card trainer-workout-card" key={item.id}>
                       <div className="record-card-head">
                         <div>
-                          <h3 className="record-title">{item.client.fullName}</h3>
+                          <div className="workout-card__top">
+                            <span className="workout-card__date">{item.client.fullName}</span>
+                          </div>
                           <p className="record-meta">{item.client.phone || item.client.username || `Telegram ID ${item.client.telegramId}`}</p>
                         </div>
                         <span className="status-pill" data-tone={item.status === "NEW" ? "pending" : "success"}>
@@ -1317,14 +1335,21 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                         />
                       </label>
 
-                      <div className="record-actions">
-                        <a className="status-button" href={getClientContactHref(item.client)} target="_blank" rel="noreferrer">
-                          Написать в Telegram
+                      <div className="record-actions workout-card__actions">
+                        <a
+                          className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                          href={getClientContactHref(item.client)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label="Написать клиенту в Telegram"
+                          title="Написать клиенту в Telegram"
+                        >
+                          <TelegramIcon />
                         </a>
-                        <button className="primary-button" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "REVIEWED")}>
+                        <button className="action-btn action-btn--secondary" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "REVIEWED")}>
                           Сохранить комментарий
                         </button>
-                        <button className="secondary-button" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "ARCHIVED")}>
+                        <button className="action-btn action-btn--danger-soft" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "ARCHIVED")}>
                           Закрыть запрос
                         </button>
                       </div>
@@ -1437,19 +1462,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
             ) : (
               <div className="record-list trainer-record-list">
                 {sortedTrainings.map((item) => (
-                    <article className="record-card workout-card" key={item.trainingId}>
+                    <article className="record-card workout-card trainer-workout-card" key={item.trainingId}>
                       <div className="record-card-head workout-card__head">
-                        <div>
-                          <div className="workout-card__top">
-                            <span className="workout-card__date">{formatShortDate(item.startAt)}</span>
-                            <span className="workout-card__time">{formatTime(item.startAt)}</span>
-                          </div>
-                          <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                        <div className="workout-card__top">
+                          <span className="workout-card__date">{formatShortDate(item.startAt)}</span>
+                          <span className="workout-card__time">{formatTime(item.startAt)}</span>
                         </div>
                         <div className="record-card-head-actions">
-                          <span className="status-pill workout-card__status" data-tone={getBookingTone(item.bookingStatus)}>
-                            {getBookingStatusLabel(item.bookingStatus)}
-                          </span>
                           {item.bookingStatus !== "CANCELLED" ? (
                             <button
                               className="action-btn action-btn--secondary calendar-icon-button"
@@ -1464,9 +1483,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                         </div>
                     </div>
 
-                    {item.clientComment ? <p className="record-comment">Комментарий клиента: {item.clientComment}</p> : null}
-                    {item.trainerComment ? <p className="record-comment">Комментарий тренера: {item.trainerComment}</p> : null}
-                    {item.client.note ? <p className="record-comment">Заметка клиента: {item.client.note}</p> : null}
+                    <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                    <div className="workout-card__status" data-tone={getBookingTone(item.bookingStatus)}>
+                      {getBookingStatusLabel(item.bookingStatus)}
+                    </div>
+                    {item.clientComment ? <p className="workout-card__comment">Комментарий клиента: {item.clientComment}</p> : null}
+                    {item.trainerComment ? <p className="workout-card__comment">Комментарий тренера: {item.trainerComment}</p> : null}
+                    {item.client.note ? <p className="workout-card__comment">Заметка клиента: {item.client.note}</p> : null}
 
                     {trainingProposalOpen[item.bookingId] ? (
                       <div className="form-grid compact-stack">
@@ -1491,7 +1514,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
 
                     <div className="record-actions workout-card__actions">
                       <a
-                        className="action-btn action-btn--secondary action-btn--icon"
+                        className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
                         href={getClientContactHref(item.client)}
                         target="_blank"
                         rel="noreferrer"
@@ -1618,7 +1641,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
           <section className="panel">
             {renderCompactHeader("Слоты", "Нажимай по часу, чтобы открыть или закрыть слот. Для диапазонов используй форму ниже.", () => setScreen("settings"), () => void loadSlots())}
 
-            <div className="form-grid form-grid-split">
+            <div className="form-grid form-grid-split slot-range-grid">
               <label className="field">
                 <span className="field-label">Показать слоты от</span>
                 <input
