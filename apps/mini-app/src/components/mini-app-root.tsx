@@ -745,10 +745,10 @@ export function MiniAppRoot() {
     try {
       await api.archiveClientTraining({ bookingId });
       await loadRecords();
-      setMessage({ tone: "success", text: "Запись скрыта из вашего списка." });
+      setMessage({ tone: "success", text: "Запись удалена из списка." });
     } catch (error) {
       const normalizedError = error as Error;
-      setMessage({ tone: "error", text: normalizedError.message || "Не удалось скрыть запись из списка." });
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось удалить запись из списка." });
     } finally {
       setIsBusy(false);
     }
@@ -1313,7 +1313,7 @@ export function MiniAppRoot() {
               </div>
               <div className="panel-header-actions">
                 <button
-                  className="chip-button"
+                  className="chip-button chip-button-compact"
                   data-active={recordsView === "active" ? "true" : "false"}
                   disabled={isBusy}
                   onClick={() => setRecordsView("active")}
@@ -1321,7 +1321,7 @@ export function MiniAppRoot() {
                   Актуальные
                 </button>
                 <button
-                  className="chip-button"
+                  className="chip-button chip-button-compact"
                   data-active={recordsView === "archive" ? "true" : "false"}
                   disabled={isBusy}
                   onClick={() => setRecordsView("archive")}
@@ -1434,6 +1434,12 @@ export function MiniAppRoot() {
                               Удалить из списка
                             </button>
                           ) : null}
+                        </div>
+                      ) : recordsView === "archive" ? (
+                        <div className="workout-card__actions">
+                          <button className="status-button action-btn action-btn--danger-soft" disabled={isBusy} onClick={() => void handleArchiveRecord(item.bookingId)}>
+                            Удалить
+                          </button>
                         </div>
                       ) : null}
                     </article>

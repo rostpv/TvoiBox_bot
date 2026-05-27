@@ -506,6 +506,13 @@ a {
   color: var(--brand-black);
 }
 
+.chip-button-compact {
+  min-height: 34px;
+  padding: 7px 12px;
+  font-size: 13px;
+  line-height: 1.1;
+}
+
 .chip-button[data-active="true"] {
   background: var(--brand-red);
   color: #fff;

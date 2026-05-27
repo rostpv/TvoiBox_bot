@@ -1510,7 +1510,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
 
             <div className="chip-group compact-stack">
               <button
-                className="chip-button"
+                className="chip-button chip-button-compact"
                 data-active={trainingsView === "active" ? "true" : "false"}
                 disabled={isBusy}
                 onClick={() => setTrainingsView("active")}
@@ -1518,7 +1518,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                 Актуальные
               </button>
               <button
-                className="chip-button"
+                className="chip-button chip-button-compact"
                 data-active={trainingsView === "archive" ? "true" : "false"}
                 disabled={isBusy}
                 onClick={() => setTrainingsView("archive")}
@@ -1630,6 +1630,12 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                         ) : null}
                         <button className="action-btn action-btn--danger-soft" disabled={isBusy} onClick={() => void handleForceCloseTraining(item.bookingId)}>
                           Удалить
+                        </button>
+                      </div>
+                    ) : trainingsView === "archive" ? (
+                      <div className="record-actions workout-card__actions">
+                        <button className="action-btn action-btn--danger-soft" disabled={isBusy} onClick={() => void handleForceCloseTraining(item.bookingId)}>
+                          РЈРґР°Р»РёС‚СЊ
                         </button>
                       </div>
                     ) : null}
