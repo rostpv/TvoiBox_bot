@@ -1626,27 +1626,27 @@ a {
 .trainer-slots-panel,
 .trainer-bookings-panel,
 .trainer-trainings-panel {
-  padding: 14px;
+  padding: 12px;
 }
 
 .trainer-settings-panel .panel-title,
 .trainer-slots-panel .panel-title,
 .trainer-bookings-panel .panel-title,
 .trainer-trainings-panel .panel-title {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .trainer-settings-panel .panel-text,
 .trainer-slots-panel .panel-text,
 .trainer-bookings-panel .panel-text,
 .trainer-trainings-panel .panel-text {
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 12px;
+  line-height: 1.32;
 }
 
 .trainer-settings-panel .field-label,
 .trainer-slots-panel .field-label {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .trainer-settings-panel .field input,
@@ -1654,15 +1654,15 @@ a {
 .trainer-settings-panel .field textarea,
 .trainer-slots-panel .field input,
 .trainer-slots-panel .field select {
-  min-height: 40px;
-  padding: 9px 11px;
-  font-size: 13px;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 12px;
 }
 
 .trainer-settings-panel .chip-button {
-  min-height: 34px;
-  padding: 0 13px;
-  font-size: 12px;
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: 11px;
 }
 
 .action-btn--secondary {
@@ -1683,8 +1683,42 @@ a {
 }
 
 .slot-range-grid .field input {
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.trainer-slots-panel .slot-legend {
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+
+.trainer-slots-panel .status-pill {
+  min-height: 24px;
+  padding: 0 10px;
+  font-size: 10px;
+}
+
+.trainer-slots-panel .slot-day {
+  padding: 12px 13px;
+}
+
+.trainer-slots-panel .slot-day-title {
+  font-size: 15px;
+}
+
+.trainer-slots-panel .time-button {
   min-height: 48px;
-  padding: 10px 12px;
+  padding: 10px 0;
+  font-size: 14px;
+}
+
+.trainer-settings-panel .record-actions .primary-button,
+.trainer-settings-panel .record-actions .secondary-button,
+.trainer-slots-panel .record-actions .primary-button,
+.trainer-slots-panel .record-actions .secondary-button {
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 12px;
 }
 
 @media (max-width: 980px) {

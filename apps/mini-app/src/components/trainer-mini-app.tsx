@@ -161,7 +161,9 @@ function buildDefaultRange(): SlotRangeState {
 function buildRangeWithDays(days: number): SlotRangeState {
   const start = getNextFullHour();
   const safeDays = Number.isFinite(days) && days > 0 ? days : 14;
-  const end = new Date(start.getTime() + safeDays * DAY_MS);
+  const end = new Date(start);
+  end.setHours(23, 0, 0, 0);
+  end.setDate(end.getDate() + safeDays);
   return {
     from: toLocalDateTimeInputValue(start),
     to: toLocalDateTimeInputValue(end),
@@ -1697,7 +1699,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
             ) : (
               <div className="booking-groups">
                 {slotGroups.map((group) => (
-                  <section className="slot-day" key={group.dayKey}>
+                  <section className="slot-day slot-day-compact" key={group.dayKey}>
                     <div className="slot-day-header">
                       <h3 className="slot-day-title">{group.title}</h3>
                     </div>
@@ -1720,7 +1722,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               </div>
             )}
 
-            <section className="panel panel-subsection">
+            <section className="panel panel-subsection trainer-slots-panel">
               <div className="panel-header">
                 <div>
                   <h3 className="panel-title">Диапазонное управление</h3>
@@ -1878,10 +1880,10 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
         ) : null}
 
         {screen === "settings" ? (
-          <section className="panel">
+          <section className="panel trainer-settings-panel">
             {renderCompactHeader("Настройки", "Здесь собраны поиск клиентов, чёрный список, слоты и параметры записи.", () => setScreen("home"), () => void loadSettings())}
 
-            <section className="panel panel-subsection">
+            <section className="panel panel-subsection trainer-settings-panel">
               <div className="panel-header">
                 <div>
                   <h3 className="panel-title">Параметры записи</h3>
@@ -1970,7 +1972,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               {settingsMeta ? <p className="record-comment">Последнее обновление: {formatDateTime(settingsMeta.updatedAt)}</p> : null}
             </section>
 
-            <div className="home-actions-grid">
+            <div className="home-actions-grid home-actions-grid-compact">
               <article className="action-card action-card-home">
                 <span className="badge">{slotGroups.length} дней</span>
                 <strong>Слоты</strong>

@@ -5,6 +5,7 @@ import { AppConfigService } from "../../config/app-config.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
 const SLOT_DURATION_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * SLOT_DURATION_MS;
 const MOSCOW_TIME_ZONE = "Europe/Moscow";
 export const VIRTUAL_SLOT_PREFIX = "virtual";
 
@@ -375,7 +376,7 @@ export class SlotsService {
     const settings = await this.ensureTrainerSettings();
 
     const defaultFrom = now;
-    const defaultTo = new Date(now.getTime() + settings.bookingHorizonDays * 24 * SLOT_DURATION_MS);
+    const defaultTo = this.getBookingHorizonExclusiveEnd(now, settings.bookingHorizonDays);
 
     const requestedFrom = input.from ? this.parseIsoDate("from", input.from) : defaultFrom;
     const requestedTo = input.to ? this.parseIsoDate("to", input.to) : defaultTo;
@@ -540,7 +541,7 @@ export class SlotsService {
 
     const now = new Date();
     const settings = await this.ensureTrainerSettings();
-    const defaultTo = new Date(now.getTime() + settings.bookingHorizonDays * 24 * SLOT_DURATION_MS);
+    const defaultTo = this.getBookingHorizonExclusiveEnd(now, settings.bookingHorizonDays);
     const from = this.roundUpToFullHour(now);
     const to = defaultTo;
 
@@ -603,7 +604,7 @@ export class SlotsService {
     const now = new Date();
     const settings = await this.ensureTrainerSettings();
     const from = this.roundUpToFullHour(now);
-    const to = new Date(now.getTime() + settings.bookingHorizonDays * 24 * SLOT_DURATION_MS);
+    const to = this.getBookingHorizonExclusiveEnd(now, settings.bookingHorizonDays);
 
     const closedSlots = await this.prismaService.slot.findMany({
       where: {
@@ -790,6 +791,14 @@ export class SlotsService {
     }
 
     return rounded;
+  }
+
+  private getBookingHorizonExclusiveEnd(now: Date, bookingHorizonDays: number): Date {
+    const safeDays = Number.isFinite(bookingHorizonDays) && bookingHorizonDays > 0
+      ? Math.trunc(bookingHorizonDays)
+      : 14;
+
+    return new Date(this.getMoscowStartOfDay(now).getTime() + (safeDays + 1) * DAY_MS);
   }
 
   private getSlotKey(startAt: Date, endAt: Date): string {

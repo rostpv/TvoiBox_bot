@@ -180,6 +180,14 @@ function addDays(dateKey: string, delta: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function getPreviewHorizonEndIso(now: Date, days: number): string {
+  const safeDays = Number.isFinite(days) && days > 0 ? Math.trunc(days) : 14;
+  const endDate = new Date(now);
+  endDate.setHours(23, 59, 59, 999);
+  endDate.setDate(endDate.getDate() + safeDays);
+  return endDate.toISOString();
+}
+
 function enumerateDateKeys(fromIso: string, toIso: string): string[] {
   const fromKey = formatDateKeyInMoscow(fromIso);
   const toKey = formatDateKeyInMoscow(toIso);
@@ -646,7 +654,7 @@ export class MiniAppPreviewRuntime {
     const state = readPreviewState();
     const now = new Date();
     const fromIso = new Date(now.getTime() - HOUR_MS).toISOString();
-    const toIso = new Date(now.getTime() + state.settings.bookingHorizonDays * 24 * HOUR_MS).toISOString();
+    const toIso = getPreviewHorizonEndIso(now, state.settings.bookingHorizonDays);
     return buildPreviewSlots(state, fromIso, toIso).filter((item) => item.status === "OPEN");
   }
 

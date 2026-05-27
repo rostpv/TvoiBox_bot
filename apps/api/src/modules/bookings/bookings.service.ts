@@ -2833,7 +2833,7 @@ export class BookingsService {
       throw new ConflictException("Cannot book past slot");
     }
 
-    const horizonEnd = new Date(now.getTime() + bookingHorizonDays * DAY_MS);
+    const horizonEnd = this.getBookingHorizonExclusiveEnd(now, bookingHorizonDays);
     if (slotStartAt.getTime() >= horizonEnd.getTime()) {
       throw new ForbiddenException("Slot is outside booking horizon");
     }
@@ -2886,6 +2886,14 @@ export class BookingsService {
   private getEndOfMoscowDay(date: Date): Date {
     const { to } = this.getMoscowDayRange(date);
     return new Date(to.getTime() - 1);
+  }
+
+  private getBookingHorizonExclusiveEnd(now: Date, bookingHorizonDays: number): Date {
+    const safeDays = Number.isFinite(bookingHorizonDays) && bookingHorizonDays > 0
+      ? Math.trunc(bookingHorizonDays)
+      : 14;
+    const { from } = this.getMoscowDayRange(now);
+    return new Date(from.getTime() + (safeDays + 1) * DAY_MS);
   }
 
   private parseVirtualSlotId(slotId: string): { startAt: Date; endAt: Date } | null {
