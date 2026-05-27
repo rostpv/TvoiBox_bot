@@ -286,6 +286,40 @@ function groupSlotsByDay(slots: AvailableSlot[]) {
   }));
 }
 
+function supportsTelegramWebAppColors(webApp: NonNullable<Window["Telegram"]>["WebApp"]): boolean {
+  if (!webApp) {
+    return false;
+  }
+
+  if (typeof webApp.isVersionAtLeast === "function") {
+    return webApp.isVersionAtLeast("6.1");
+  }
+
+  const rawVersion = webApp.version?.trim();
+  if (!rawVersion) {
+    return false;
+  }
+
+  const actual = rawVersion.split(".").map((part) => Number(part));
+  const required = [6, 1];
+  const length = Math.max(actual.length, required.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const actualPart = actual[index] ?? 0;
+    const requiredPart = required[index] ?? 0;
+
+    if (actualPart > requiredPart) {
+      return true;
+    }
+
+    if (actualPart < requiredPart) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export function MiniAppRoot() {
   const allowTechnicalPreview =
     typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -380,8 +414,10 @@ export function MiniAppRoot() {
       if (webApp) {
         webApp.ready();
         webApp.expand();
-        webApp.setHeaderColor?.("#ffffff");
-        webApp.setBackgroundColor?.("#f7f4ef");
+        if (supportsTelegramWebAppColors(webApp)) {
+          webApp.setHeaderColor?.("#ffffff");
+          webApp.setBackgroundColor?.("#f7f4ef");
+        }
       }
 
       const initData = webApp?.initData?.trim();
