@@ -1087,9 +1087,11 @@ export class BookingsService {
     }
 
     const filenameDate = this.formatFileDate(training.startAt);
-    const summary = this.escapeIcsText("Твой Бокс — персональная тренировка");
+    const summary = this.escapeIcsText("Твой Бокс — тренировка");
+    const trainerTelegramUrl = "https://t.me/RostPV";
     const descriptionParts = [
-      `Клиент: ${booking.client.fullName}`,
+      "Тренер: Ростислав",
+      `Связь с тренером: ${trainerTelegramUrl}`,
       booking.trainerComment ? `Комментарий тренера: ${booking.trainerComment}` : null,
       booking.clientComment ? `Комментарий клиента: ${booking.clientComment}` : null,
     ].filter(Boolean) as string[];
@@ -1102,6 +1104,7 @@ export class BookingsService {
         endAt: training.endAt,
         summary,
         description: descriptionParts.join("\n"),
+        url: trainerTelegramUrl,
       }),
     };
   }
@@ -1136,11 +1139,19 @@ export class BookingsService {
     }
 
     const filenameDate = this.formatFileDate(booking.slot.startAt);
-    const summary = this.escapeIcsText("Твой Бокс — заявка на тренировку");
+    const isConfirmedTraining = Boolean(booking.training) || booking.status === BookingStatus.CONFIRMED;
+    const summary = this.escapeIcsText(
+      isConfirmedTraining
+        ? `Тренировка: ${booking.client.fullName}`
+        : `Заявка: ${booking.client.fullName}`,
+    );
+    const normalizedUsername = booking.client.username?.trim().replace(/^@/, "") ?? "";
+    const clientTelegramUrl = normalizedUsername ? `https://t.me/${normalizedUsername}` : null;
     const descriptionParts = [
       `Клиент: ${booking.client.fullName}`,
       booking.client.phone ? `Телефон: ${booking.client.phone}` : null,
-      booking.client.username ? `Telegram: @${booking.client.username}` : null,
+      normalizedUsername ? `Username: @${normalizedUsername}` : null,
+      clientTelegramUrl ? `Telegram: ${clientTelegramUrl}` : `Telegram ID: ${booking.client.telegramId}`,
       booking.trainerComment ? `Комментарий тренера: ${booking.trainerComment}` : null,
       booking.clientComment ? `Комментарий клиента: ${booking.clientComment}` : null,
     ].filter(Boolean) as string[];
@@ -1153,6 +1164,7 @@ export class BookingsService {
         endAt: booking.slot.endAt,
         summary,
         description: descriptionParts.join("\n"),
+        url: clientTelegramUrl,
       }),
     };
   }
@@ -2367,6 +2379,7 @@ export class BookingsService {
     endAt: Date;
     summary: string;
     description: string;
+    url?: string | null;
   }): string {
     return [
       "BEGIN:VCALENDAR",
@@ -2381,6 +2394,7 @@ export class BookingsService {
       `DTEND:${this.toIcsUtc(input.endAt)}`,
       `SUMMARY:${input.summary}`,
       `DESCRIPTION:${this.escapeIcsText(input.description)}`,
+      input.url ? `URL:${this.escapeIcsText(input.url)}` : null,
       "BEGIN:VALARM",
       "ACTION:DISPLAY",
       "DESCRIPTION:Напоминание о тренировке завтра",
@@ -2393,7 +2407,7 @@ export class BookingsService {
       "END:VALARM",
       "END:VEVENT",
       "END:VCALENDAR",
-    ].join("\r\n");
+    ].filter((line): line is string => Boolean(line)).join("\r\n");
   }
 
   private formatFileDate(value: Date): string {
