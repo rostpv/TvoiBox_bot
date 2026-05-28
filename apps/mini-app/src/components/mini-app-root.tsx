@@ -696,6 +696,23 @@ export function MiniAppRoot() {
     }
   };
 
+  const handleArchiveNoSlotRequest = async (requestId: string) => {
+    setIsBusy(true);
+    setMessage(null);
+
+    try {
+      await api.archiveClientNoSlotRequest({ requestId });
+      const response = await api.getClientNoSlotRequests();
+      setNoSlotRequests(response.items);
+      setMessage({ tone: "success", text: "Запрос удалён из списка." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось удалить запрос." });
+    } finally {
+      setIsBusy(false);
+    }
+  };
+
   const handleCancelTraining = async (bookingId: string) => {
     setIsBusy(true);
     setMessage(null);
@@ -1356,6 +1373,11 @@ export function MiniAppRoot() {
                       </div>
                       {item.clientComment ? <p className="record-comment">Ваш комментарий: {item.clientComment}</p> : null}
                       {item.trainerComment ? <p className="record-comment">Комментарий тренера: {item.trainerComment}</p> : null}
+                      <div className="record-actions">
+                        <button className="secondary-button" disabled={isBusy} onClick={() => void handleArchiveNoSlotRequest(item.id)}>
+                          Удалить запрос
+                        </button>
+                      </div>
                     </article>
                   ))}
                 </div>

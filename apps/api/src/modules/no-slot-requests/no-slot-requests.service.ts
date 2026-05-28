@@ -57,6 +57,11 @@ export interface UpdateNoSlotRequestInput {
   trainerComment?: string | null;
 }
 
+export interface ArchiveClientNoSlotRequestInput {
+  telegramId: string;
+  requestId: string;
+}
+
 export interface UpdateNoSlotRequestResult {
   status: "updated";
   request: NoSlotRequestDto;
@@ -191,6 +196,9 @@ export class NoSlotRequestsService {
         client: {
           telegramId,
         },
+        status: {
+          not: NoSlotRequestStatus.ARCHIVED,
+        },
       },
       include: {
         client: true,
@@ -202,6 +210,48 @@ export class NoSlotRequestsService {
     return {
       status: "ok",
       items: items.map((item) => this.toDto(item)),
+    };
+  }
+
+  async archiveByClient(input: ArchiveClientNoSlotRequestInput): Promise<UpdateNoSlotRequestResult> {
+    const telegramId = input.telegramId.trim();
+    const requestId = input.requestId.trim();
+
+    if (!telegramId) {
+      throw new BadRequestException("telegramId is required");
+    }
+
+    if (!requestId) {
+      throw new BadRequestException("requestId is required");
+    }
+
+    const existing = await this.prismaService.noSlotRequest.findUnique({
+      where: { id: requestId },
+      include: { client: true },
+    });
+
+    if (!existing) {
+      throw new NotFoundException("No-slot request not found");
+    }
+
+    if (existing.client.telegramId !== telegramId) {
+      throw new ForbiddenException("No-slot request belongs to another client");
+    }
+
+    const updated = await this.prismaService.noSlotRequest.update({
+      where: { id: requestId },
+      data: {
+        status: NoSlotRequestStatus.ARCHIVED,
+        reviewedAt: existing.reviewedAt ?? new Date(),
+      },
+      include: {
+        client: true,
+      },
+    });
+
+    return {
+      status: "updated",
+      request: this.toDto(updated),
     };
   }
 

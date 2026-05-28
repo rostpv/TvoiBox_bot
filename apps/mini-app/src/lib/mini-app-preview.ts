@@ -931,9 +931,30 @@ export class MiniAppPreviewRuntime {
     const client = state.clients.find((item) => item.telegramId === session.telegramId);
     const items = state.noSlotRequests
       .filter((item) => item.clientId === client?.id)
+      .filter((item) => item.status !== "ARCHIVED")
       .map((item) => buildNoSlotRequest(state, item));
 
     return { status: "ok", items };
+  }
+
+  archiveClientNoSlotRequest(token: string, payload: { requestId: string }): { status: "updated"; request: NoSlotRequestDto } {
+    const session = getSessionFromToken(token);
+    const state = readPreviewState();
+    const client = state.clients.find((item) => item.telegramId === session.telegramId);
+    state.noSlotRequests = state.noSlotRequests.map((item) => item.id === payload.requestId && item.clientId === client?.id
+      ? { ...item, status: "ARCHIVED" }
+      : item);
+    writePreviewState(state);
+
+    const request = state.noSlotRequests.find((item) => item.id === payload.requestId && item.clientId === client?.id);
+    if (!request) {
+      throw new Error("Запрос не найден.");
+    }
+
+    return {
+      status: "updated",
+      request: buildNoSlotRequest(state, request),
+    };
   }
 
   getTrainerBookings(): { status: "ok"; items: PendingBookingDto[] } {

@@ -54,6 +54,9 @@ function buildClientWelcomeMessage(config: BotRuntimeConfig, fullName?: string |
   const greeting = fullName?.trim() ? `Привет, ${fullName.trim()}!` : "Привет!";
   const miniAppInlineKeyboard = buildClientMiniAppKeyboard(config);
   const miniAppReplyKeyboard = buildMiniAppReplyKeyboard(config);
+  const inlineKeyboard = miniAppInlineKeyboard
+    ? miniAppInlineKeyboard.row().text("Меню бота", "screen:client-main")
+    : new InlineKeyboard().text("Меню бота", "screen:client-main");
 
   return {
     welcomeText: [
@@ -65,9 +68,9 @@ function buildClientWelcomeMessage(config: BotRuntimeConfig, fullName?: string |
       "Здесь можно записаться на индивидуальные тренировки к тренеру Ростиславу, посмотреть свои записи и быстро связаться с тренером по удобному времени.",
     ].join("\n"),
     actionText: miniAppInlineKeyboard
-      ? "Нажмите кнопку ниже, чтобы открыть mini app, или кнопку «Старт», чтобы остаться в сценарии бота."
-      : "Нажмите кнопку «Старт» ниже, чтобы открыть меню.",
-    inlineKeyboard: miniAppInlineKeyboard ?? new InlineKeyboard().text("Старт", "screen:client-main"),
+      ? "Нажмите кнопку ниже, чтобы открыть mini app, или «Меню бота», чтобы записаться через бот."
+      : "Нажмите «Меню бота», чтобы записаться через бот.",
+    inlineKeyboard,
     replyKeyboard: miniAppReplyKeyboard,
   };
 }
@@ -184,6 +187,11 @@ async function handleStart(
 
     await context.reply(welcome.actionText, {
       reply_markup: welcome.inlineKeyboard,
+    });
+
+    const menuMessage = buildClientBotMenuMessage(rootScreen);
+    await context.reply(menuMessage.text, {
+      reply_markup: menuMessage.keyboard,
     });
     return;
   }

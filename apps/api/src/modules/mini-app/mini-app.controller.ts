@@ -65,6 +65,10 @@ interface CreateNoSlotRequestBody {
   clientComment?: string | null;
 }
 
+interface ClientNoSlotRequestActionBody {
+  requestId?: string;
+}
+
 interface TrainerBookingActionBody {
   bookingId?: string;
 }
@@ -356,6 +360,19 @@ export class MiniAppController {
   async getClientNoSlotRequests(@MiniAppSession() session: MiniAppSessionPayload) {
     return this.noSlotRequestsService.listForClient({
       telegramId: session.telegramId,
+    });
+  }
+
+  @UseGuards(MiniAppAuthGuard)
+  @Post("client/no-slot-requests/archive")
+  async archiveClientNoSlotRequest(@MiniAppSession() session: MiniAppSessionPayload, @Body() body: ClientNoSlotRequestActionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.noSlotRequestsService.archiveByClient({
+      telegramId: session.telegramId,
+      requestId: body.requestId ?? "",
     });
   }
 

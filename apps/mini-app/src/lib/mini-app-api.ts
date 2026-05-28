@@ -465,6 +465,17 @@ export class MiniAppApi {
     return this.authRequest<NoSlotRequestsResponse>("/mini-app/client/no-slot-requests", { method: "GET" });
   }
 
+  async archiveClientNoSlotRequest(payload: { requestId: string }): Promise<{ status: "updated"; request: NoSlotRequestDto }> {
+    if (this.shouldUsePreview()) {
+      return this.preview.archiveClientNoSlotRequest(this.requireToken(), payload);
+    }
+
+    return this.authRequest<{ status: "updated"; request: NoSlotRequestDto }>("/mini-app/client/no-slot-requests/archive", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
   async getTrainerBookings(): Promise<PendingBookingsResponse> {
     if (this.shouldUsePreview()) {
       return this.preview.getTrainerBookings();
