@@ -507,25 +507,37 @@ export class BookingsService {
         throw new NotFoundException("Booking not found");
       }
 
-      const archivedRows = await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id"
+      const archiveRows = await transaction.$queryRaw<Array<{
+        id: string;
+        trainerArchivedAt: Date | null;
+        trainerDeletedAt: Date | null;
+      }>>`
+        SELECT "id", "trainerArchivedAt", "trainerDeletedAt"
         FROM "bookings"
         WHERE "id" = ${booking.id}
-          AND "trainerArchivedAt" IS NOT NULL
       `;
 
-        if (archivedRows.length > 0) {
-          return {
-            status: "archived" as const,
-            booking: this.toPendingBookingDto(booking),
-          };
-        }
+      const archiveState = archiveRows[0];
+      if (archiveState?.trainerDeletedAt) {
+        return {
+          status: "archived" as const,
+          booking: this.toPendingBookingDto(booking),
+        };
+      }
 
-      await transaction.$executeRaw`
-        UPDATE "bookings"
-        SET "trainerArchivedAt" = ${now}
-        WHERE "id" = ${booking.id}
-      `;
+      if (archiveState?.trainerArchivedAt) {
+        await transaction.$executeRaw`
+          UPDATE "bookings"
+          SET "trainerDeletedAt" = ${now}
+          WHERE "id" = ${booking.id}
+        `;
+      } else {
+        await transaction.$executeRaw`
+          UPDATE "bookings"
+          SET "trainerArchivedAt" = ${now}
+          WHERE "id" = ${booking.id}
+        `;
+      }
 
       return {
         status: "archived" as const,
@@ -583,10 +595,20 @@ export class BookingsService {
         FROM "bookings"
         WHERE "clientId" = ${client.id}
           AND "clientArchivedAt" IS NOT NULL
+          AND "clientDeletedAt" IS NULL
       `;
       const archivedIds = new Set(archivedRows.map((row) => row.id));
 
+      const deletedRows = await transaction.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "bookings"
+        WHERE "clientId" = ${client.id}
+          AND "clientDeletedAt" IS NOT NULL
+      `;
+      const deletedIds = new Set(deletedRows.map((row) => row.id));
+
       const items = bookings
+        .filter((booking) => !deletedIds.has(booking.id))
         .filter((booking) => includeArchived ? archivedIds.has(booking.id) : !archivedIds.has(booking.id))
         .map((booking) => {
         const isFuture = booking.slot.startAt.getTime() > now.getTime();
@@ -707,10 +729,18 @@ export class BookingsService {
           take: 200,
         });
 
+        const deletedRows = await transaction.$queryRaw<Array<{ id: string }>>`
+          SELECT "id"
+          FROM "bookings"
+          WHERE "trainerDeletedAt" IS NOT NULL
+        `;
+        const deletedIds = new Set(deletedRows.map((row) => row.id));
+
         return {
           status: "ok" as const,
           items: bookings
             .filter((booking) => booking.training)
+            .filter((booking) => !deletedIds.has(booking.id))
             .map((booking) => {
             const isFuture = booking.slot.startAt.getTime() > now.getTime();
             return {
@@ -783,21 +813,36 @@ export class BookingsService {
         throw new NotFoundException("Booking not found");
       }
 
-      const archivedRows = await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id"
+      const archiveRows = await transaction.$queryRaw<Array<{
+        id: string;
+        clientArchivedAt: Date | null;
+        clientDeletedAt: Date | null;
+      }>>`
+        SELECT "id", "clientArchivedAt", "clientDeletedAt"
         FROM "bookings"
         WHERE "id" = ${booking.id}
-          AND "clientArchivedAt" IS NOT NULL
       `;
-      if (archivedRows.length > 0) {
-        throw new ConflictException("Booking is already archived");
+      const archiveState = archiveRows[0];
+      if (archiveState?.clientDeletedAt) {
+        return {
+          status: "archived" as const,
+          booking: this.toPendingBookingDto(booking),
+        };
       }
 
-      await transaction.$executeRaw`
-        UPDATE "bookings"
-        SET "clientArchivedAt" = ${now}
-        WHERE "id" = ${booking.id}
-      `;
+      if (archiveState?.clientArchivedAt) {
+        await transaction.$executeRaw`
+          UPDATE "bookings"
+          SET "clientDeletedAt" = ${now}
+          WHERE "id" = ${booking.id}
+        `;
+      } else {
+        await transaction.$executeRaw`
+          UPDATE "bookings"
+          SET "clientArchivedAt" = ${now}
+          WHERE "id" = ${booking.id}
+        `;
+      }
 
       return {
         status: "archived" as const,

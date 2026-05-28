@@ -117,6 +117,8 @@ model Booking {
   cancelledAt      DateTime?
   clientArchivedAt DateTime?
   trainerArchivedAt DateTime?
+  clientDeletedAt  DateTime?
+  trainerDeletedAt DateTime?
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   client           Client        @relation(fields: [clientId], references: [id], onDelete: Restrict)
@@ -127,6 +129,8 @@ model Booking {
   @@index([clientId, status])
   @@index([clientId, clientArchivedAt])
   @@index([trainerArchivedAt])
+  @@index([clientDeletedAt])
+  @@index([trainerDeletedAt])
   @@index([slotId, status])
   @@index([expiresAt])
   @@map("bookings")

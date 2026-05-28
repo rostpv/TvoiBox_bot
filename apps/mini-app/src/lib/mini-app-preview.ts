@@ -79,6 +79,8 @@ type PreviewBookingRecord = {
   proposedStartAt: string | null;
   archivedByClient: boolean;
   archivedByTrainer: boolean;
+  deletedByClient?: boolean;
+  deletedByTrainer?: boolean;
 };
 
 type PreviewNoSlotRequestRecord = {
@@ -710,7 +712,7 @@ export class MiniAppPreviewRuntime {
     }
 
     const items = state.bookings
-      .filter((item) => item.clientId === client.id && (params?.includeArchived ? item.archivedByClient : !item.archivedByClient))
+      .filter((item) => item.clientId === client.id && !item.deletedByClient && (params?.includeArchived ? item.archivedByClient : !item.archivedByClient))
       .sort((left, right) => params?.includeArchived ? right.startAt.localeCompare(left.startAt) : left.startAt.localeCompare(right.startAt))
       .map(buildClientTraining);
 
@@ -890,9 +892,15 @@ export class MiniAppPreviewRuntime {
     const session = getSessionFromToken(token);
     const state = readPreviewState();
     const client = state.clients.find((item) => item.telegramId === session.telegramId);
-    state.bookings = state.bookings.map((item) => item.id === payload.bookingId && item.clientId === client?.id
-      ? { ...item, archivedByClient: true }
-      : item);
+    state.bookings = state.bookings.map((item) => {
+      if (item.id !== payload.bookingId || item.clientId !== client?.id) {
+        return item;
+      }
+
+      return item.archivedByClient
+        ? { ...item, deletedByClient: true }
+        : { ...item, archivedByClient: true };
+    });
     writePreviewState(state);
 
     return { status: "archived" };
@@ -1026,7 +1034,7 @@ export class MiniAppPreviewRuntime {
     const from = params?.from ?? createMoscowIso("2026-05-22", "00:00");
     const to = params?.to ?? createMoscowIso("2026-06-05", "23:00");
     const items = state.bookings
-      .filter((item) => (params?.includeArchived ? item.archivedByTrainer : !item.archivedByTrainer) && item.trainingStatus !== null && item.startAt >= from && item.startAt <= to)
+      .filter((item) => !item.deletedByTrainer && (params?.includeArchived ? item.archivedByTrainer : !item.archivedByTrainer) && item.trainingStatus !== null && item.startAt >= from && item.startAt <= to)
       .sort((left, right) => params?.includeArchived ? right.startAt.localeCompare(left.startAt) : left.startAt.localeCompare(right.startAt))
       .map((item) => buildTrainerTraining(state, item));
 
@@ -1074,9 +1082,15 @@ export class MiniAppPreviewRuntime {
 
   archiveTrainerBooking(payload: { bookingId: string }): BookingActionResponse {
     const state = readPreviewState();
-    state.bookings = state.bookings.map((item) => item.id === payload.bookingId
-      ? { ...item, archivedByTrainer: true }
-      : item);
+    state.bookings = state.bookings.map((item) => {
+      if (item.id !== payload.bookingId) {
+        return item;
+      }
+
+      return item.archivedByTrainer
+        ? { ...item, deletedByTrainer: true }
+        : { ...item, archivedByTrainer: true };
+    });
     writePreviewState(state);
 
     return { status: "archived" };
