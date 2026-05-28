@@ -41,6 +41,10 @@ export interface ListNoSlotRequestsInput {
   status?: NoSlotRequestStatus;
 }
 
+export interface ListClientNoSlotRequestsInput {
+  telegramId: string;
+}
+
 export interface ListNoSlotRequestsResult {
   status: "ok";
   items: NoSlotRequestDto[];
@@ -173,6 +177,31 @@ export class NoSlotRequestsService {
     return {
       status: "ok",
       items: sorted.map((item) => this.toDto(item)),
+    };
+  }
+
+  async listForClient(input: ListClientNoSlotRequestsInput): Promise<ListNoSlotRequestsResult> {
+    const telegramId = input.telegramId.trim();
+    if (!telegramId) {
+      throw new BadRequestException("telegramId is required");
+    }
+
+    const items = await this.prismaService.noSlotRequest.findMany({
+      where: {
+        client: {
+          telegramId,
+        },
+      },
+      include: {
+        client: true,
+      },
+      orderBy: [{ createdAt: "desc" }],
+      take: 20,
+    });
+
+    return {
+      status: "ok",
+      items: items.map((item) => this.toDto(item)),
     };
   }
 

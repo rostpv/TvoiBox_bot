@@ -457,6 +457,14 @@ export class MiniAppApi {
     });
   }
 
+  async getClientNoSlotRequests(): Promise<NoSlotRequestsResponse> {
+    if (this.shouldUsePreview()) {
+      return this.preview.getClientNoSlotRequests(this.requireToken());
+    }
+
+    return this.authRequest<NoSlotRequestsResponse>("/mini-app/client/no-slot-requests", { method: "GET" });
+  }
+
   async getTrainerBookings(): Promise<PendingBookingsResponse> {
     if (this.shouldUsePreview()) {
       return this.preview.getTrainerBookings();

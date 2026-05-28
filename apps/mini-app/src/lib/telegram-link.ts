@@ -12,6 +12,16 @@ export function openExternalUrl(url: string): void {
     return;
   }
 
+  if (url.startsWith("tg://")) {
+    window.location.href = url;
+    return;
+  }
+
+  if (url.startsWith("https://t.me/") && window.Telegram?.WebApp?.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(url);
+    return;
+  }
+
   if (isTelegramMobileWebView() && window.Telegram?.WebApp?.openLink) {
     window.Telegram.WebApp.openLink(url);
     return;

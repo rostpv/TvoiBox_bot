@@ -97,6 +97,11 @@ function buildStartMessage(role: UserRole, screenId: ScreenId) {
   return { text, keyboard };
 }
 
+function buildClientBotMenuMessage(screenId: ScreenId) {
+  const { text, keyboard } = buildScreenView(screenId, "client");
+  return { text, keyboard };
+}
+
 async function handleStart(
   context: Context,
   dependencies: StartHandlerDependencies,
@@ -161,6 +166,14 @@ async function handleStart(
     screenId: rootScreen,
     source,
   });
+
+  if (role === "client" && source === "start-text") {
+    const menuMessage = buildClientBotMenuMessage(rootScreen);
+    await context.reply(menuMessage.text, {
+      reply_markup: menuMessage.keyboard,
+    });
+    return;
+  }
 
   if (role === "client") {
     const welcome = buildClientWelcomeMessage(dependencies.config, clientFullName);

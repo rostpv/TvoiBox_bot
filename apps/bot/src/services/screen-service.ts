@@ -42,6 +42,7 @@ export function getScreenText(screenId: ScreenId, role: UserRole): string {
         "Выберите действие кнопкой ниже.",
         "Записаться - открыть даты и время.",
         "Мои тренировки - посмотреть и управлять своими записями.",
+        "Нет подходящего времени - отправить тренеру пожелания по дням и времени.",
         "О боте - заново открыть приветствие и краткую подсказку.",
       ].join("\n");
     case "client-intro":
@@ -110,12 +111,16 @@ export function buildScreenKeyboard(screenId: ScreenId, role: UserRole): InlineK
         .row()
         .text("Мои тренировки", "screen:client-trainings")
         .row()
+        .text("Нет подходящего времени", "screen:client-no-slot")
+        .row()
         .text("О боте", "screen:client-intro");
     case "client-intro":
       return new InlineKeyboard()
         .text("Открыть меню", "screen:client-main")
         .row()
         .text("Записаться", "screen:client-booking")
+        .row()
+        .text("Нет подходящего времени", "screen:client-no-slot")
         .row()
         .text("Мои тренировки", "screen:client-trainings");
     case "client-booking":

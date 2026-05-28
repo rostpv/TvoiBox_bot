@@ -925,6 +925,17 @@ export class MiniAppPreviewRuntime {
     return { status: "created" };
   }
 
+  getClientNoSlotRequests(token: string): NoSlotRequestsResponse {
+    const session = getSessionFromToken(token);
+    const state = readPreviewState();
+    const client = state.clients.find((item) => item.telegramId === session.telegramId);
+    const items = state.noSlotRequests
+      .filter((item) => item.clientId === client?.id)
+      .map((item) => buildNoSlotRequest(state, item));
+
+    return { status: "ok", items };
+  }
+
   getTrainerBookings(): { status: "ok"; items: PendingBookingDto[] } {
     const state = readPreviewState();
     const items = state.bookings

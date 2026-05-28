@@ -253,6 +253,10 @@ function getClientContactHref(client: { username: string | null; telegramId: str
   return `tg://user?id=${client.telegramId}`;
 }
 
+function openClientContact(client: { username: string | null; telegramId: string }): void {
+  openExternalUrl(getClientContactHref(client));
+}
+
 function sortPendingBookings(items: PendingBookingDto[]): PendingBookingDto[] {
   return [...items].sort((left, right) => left.slot.startAt.localeCompare(right.slot.startAt));
 }
@@ -1313,16 +1317,15 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                           <span className="workout-card__time">{formatTime(item.slot.startAt)}</span>
                         </div>
                         <div className="record-card-head-actions">
-                          <a
+                          <button
+                            type="button"
                             className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                            href={getClientContactHref(item.client)}
-                            target="_blank"
-                            rel="noreferrer"
                             aria-label="Написать клиенту в Telegram"
                             title="Написать клиенту в Telegram"
+                            onClick={() => openClientContact(item.client)}
                           >
                             <TelegramIcon />
-                          </a>
+                          </button>
                         </div>
                       </div>
 
@@ -1438,16 +1441,15 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                       </label>
 
                       <div className="record-actions workout-card__actions">
-                        <a
+                        <button
+                          type="button"
                           className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                          href={getClientContactHref(item.client)}
-                          target="_blank"
-                          rel="noreferrer"
                           aria-label="Написать клиенту в Telegram"
                           title="Написать клиенту в Telegram"
+                          onClick={() => openClientContact(item.client)}
                         >
                           <TelegramIcon />
-                        </a>
+                        </button>
                         <button className="action-btn action-btn--secondary" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "REVIEWED")}>
                           Сохранить комментарий
                         </button>
@@ -1607,16 +1609,15 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                           <span className="workout-card__time">{formatTime(item.startAt)}</span>
                         </div>
                         <div className="record-card-head-actions">
-                          <a
+                          <button
+                            type="button"
                             className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                            href={getClientContactHref(item.client)}
-                            target="_blank"
-                            rel="noreferrer"
                             aria-label="Написать клиенту в Telegram"
                             title="Написать клиенту в Telegram"
+                            onClick={() => openClientContact(item.client)}
                           >
                             <TelegramIcon />
-                          </a>
+                          </button>
                           {item.bookingStatus !== "CANCELLED" ? (
                             <button
                               className="action-btn action-btn--secondary calendar-icon-button"
@@ -1954,9 +1955,9 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                     </label>
 
                     <div className="record-actions">
-                      <a className="status-button" href={getClientContactHref(client)} target="_blank" rel="noreferrer">
+                      <button className="status-button" type="button" onClick={() => openClientContact(client)}>
                         Написать в Telegram
-                      </a>
+                      </button>
                       {client.isBlacklisted ? (
                         <button className="secondary-button" disabled={isBusy} onClick={() => void handleRemoveFromBlacklist(client.id)}>
                           Убрать из чёрного списка

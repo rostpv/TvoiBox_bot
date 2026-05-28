@@ -351,6 +351,14 @@ export class MiniAppController {
     });
   }
 
+  @UseGuards(MiniAppAuthGuard)
+  @Get("client/no-slot-requests")
+  async getClientNoSlotRequests(@MiniAppSession() session: MiniAppSessionPayload) {
+    return this.noSlotRequestsService.listForClient({
+      telegramId: session.telegramId,
+    });
+  }
+
   @UseGuards(MiniAppAuthGuard, MiniAppTrainerGuard)
   @Get("trainer/bookings")
   async getTrainerBookings(@MiniAppSession() session: MiniAppSessionPayload) {

@@ -8,6 +8,8 @@ import {
   ClientTrainingDto,
   MiniAppApi,
   MiniAppMeResponse,
+  NoSlotRequestDto,
+  NoSlotRequestStatusType,
   SlotClosureInfo,
   getMiniAppApiBaseUrl,
 } from "../lib/mini-app-api";
@@ -113,6 +115,19 @@ function formatTime(dateIso: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(dateIso));
+}
+
+function getNoSlotStatusLabel(status: NoSlotRequestStatusType): string {
+  switch (status) {
+    case "NEW":
+      return "Отправлен";
+    case "REVIEWED":
+      return "В работе";
+    case "ARCHIVED":
+      return "Закрыт";
+    default:
+      return status;
+  }
 }
 
 const WEEKDAY_LABELS_RU: Record<string, string> = {
@@ -351,6 +366,7 @@ export function MiniAppRoot() {
   const [closureInfo, setClosureInfo] = useState<SlotClosureInfo | null>(null);
   const [bookingRules, setBookingRules] = useState<{ bookingHorizonDays: number; sameDayBookingCutoff: number } | null>(null);
   const [records, setRecords] = useState<ClientTrainingDto[]>([]);
+  const [noSlotRequests, setNoSlotRequests] = useState<NoSlotRequestDto[]>([]);
   const [recordsLoaded, setRecordsLoaded] = useState(false);
   const [recordsView, setRecordsView] = useState<RecordsViewMode>("active");
   const [selectedSlotId, setSelectedSlotId] = useState("");
@@ -456,14 +472,16 @@ export function MiniAppRoot() {
   const loadBookingContext = async () => {
     setIsBusy(true);
     try {
-      const [nextSlots, nextClosureInfo, nextRules] = await Promise.all([
+      const [nextSlots, nextClosureInfo, nextRules, nextNoSlotRequests] = await Promise.all([
         api.getClientSlots(),
         api.getClientClosureInfo(),
         api.getClientBookingRules(),
+        api.getClientNoSlotRequests(),
       ]);
       setSlots(nextSlots);
       setClosureInfo(nextClosureInfo);
       setBookingRules(nextRules.settings);
+      setNoSlotRequests(nextNoSlotRequests.items);
     } finally {
       setIsBusy(false);
     }
@@ -667,6 +685,8 @@ export function MiniAppRoot() {
         preferredTime: "",
         clientComment: "",
       });
+      const response = await api.getClientNoSlotRequests();
+      setNoSlotRequests(response.items);
       setMessage({ tone: "success", text: "Запрос без слота отправлен. Тренер увидит ваши пожелания." });
     } catch (error) {
       const normalizedError = error as Error;
@@ -1312,6 +1332,33 @@ export function MiniAppRoot() {
                 <button className="primary-button no-slot-submit-button" disabled={isBusy} onClick={() => void handleNoSlotRequest()}>
                   Отправить запрос
                 </button>
+              </section>
+            ) : null}
+
+            {noSlotRequests.length > 0 ? (
+              <section className="panel no-slot-panel">
+                <div className="no-slot-header">
+                  <h3 className="panel-title">Запросы без слота</h3>
+                  <p className="panel-text">Здесь появится ответ тренера, если он оставит комментарий к вашему запросу.</p>
+                </div>
+
+                <div className="record-list">
+                  {noSlotRequests.slice(0, 5).map((item) => (
+                    <article className="record-card" key={item.id}>
+                      <div className="record-card-head">
+                        <div>
+                          <h4 className="record-title">Удобные дни: {item.preferredDays.map((day) => WEEKDAY_LABELS_RU[day] ?? day).join(", ")}</h4>
+                          <p className="record-meta">{item.preferredTime ? `Время: ${item.preferredTime}` : `Создан: ${formatDateTime(item.createdAt)}`}</p>
+                        </div>
+                        <span className="status-pill" data-tone={item.status === "NEW" ? "pending" : item.status === "ARCHIVED" ? "muted" : "success"}>
+                          {getNoSlotStatusLabel(item.status)}
+                        </span>
+                      </div>
+                      {item.clientComment ? <p className="record-comment">Ваш комментарий: {item.clientComment}</p> : null}
+                      {item.trainerComment ? <p className="record-comment">Комментарий тренера: {item.trainerComment}</p> : null}
+                    </article>
+                  ))}
+                </div>
               </section>
             ) : null}
           </section>
