@@ -1280,10 +1280,10 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.06);
@@ -1295,8 +1295,8 @@ a {
 }
 
 .icon-button-compact svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   display: block;
   margin: auto;
   transition: transform 0.25s ease, color 0.18s ease;
@@ -1981,15 +1981,15 @@ a {
   }
 
   .icon-button-compact {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
   }
 
   .icon-button-compact svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .calendar-icon-button svg,
@@ -2402,10 +2402,10 @@ a {
   }
 
   .panel-header-slim .icon-button-compact {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
-    min-height: 44px;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
     border-radius: 999px;
   }
 

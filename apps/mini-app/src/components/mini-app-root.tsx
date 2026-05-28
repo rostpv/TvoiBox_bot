@@ -11,7 +11,8 @@ import {
   SlotClosureInfo,
   getMiniAppApiBaseUrl,
 } from "../lib/mini-app-api";
-import { openCalendarFile } from "../lib/telegram-file";
+import { isLocalPreviewEnvironment } from "../lib/mini-app-preview";
+import { openExternalUrl } from "../lib/telegram-link";
 import { TrainerMiniApp } from "./trainer-mini-app";
 
 type ScreenId = "home" | "booking" | "records" | "profile" | "support";
@@ -762,22 +763,30 @@ export function MiniAppRoot() {
     setMessage(null);
 
     try {
+      if (!isLocalPreviewEnvironment()) {
+        const directUrl = api.getClientCalendarFileUrl(bookingId);
+        openExternalUrl(directUrl);
+        setMessage({
+          tone: "info",
+          text: "Открываем файл календаря. Если выбор приложения не появился, проверьте загрузки Telegram.",
+        });
+        return;
+      }
+
       const blob = await api.downloadClientCalendarFile(bookingId);
       const date = new Date(startAt);
       const fileName = `tvoy-box-training-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}-${String(date.getHours()).padStart(2, "0")}-${String(date.getMinutes()).padStart(2, "0")}.ics`;
-      const openMode = await openCalendarFile(blob, fileName);
-      setMessage({
-        tone: "success",
-        text: openMode === "shared"
-          ? "Открылось меню выбора приложения для календаря. Напоминания за 1 день и за 1 час уже добавлены в файле."
-          : "Файл календаря скачан. Если Telegram не показал выбор приложения, откройте файл из загрузок."
-      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setMessage({ tone: "success", text: "Файл календаря скачан." });
     } catch (error) {
       const normalizedError = error as Error;
-      if (normalizedError.name === "AbortError") {
-        setMessage({ tone: "info", text: "Выбор приложения для календаря отменён." });
-        return;
-      }
       setMessage({ tone: "error", text: normalizedError.message || "Не удалось открыть файл календаря." });
     } finally {
       setIsBusy(false);

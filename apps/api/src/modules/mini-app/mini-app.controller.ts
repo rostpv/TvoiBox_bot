@@ -1,5 +1,5 @@
 import { NoSlotRequestStatus } from "@prisma/client";
-import { BadRequestException, Body, Controller, Get, Header, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Get, Header, Post, Query, Res, UseGuards } from "@nestjs/common";
 
 import { BookingsService } from "../bookings/bookings.service";
 import { ClientsService } from "../clients/clients.service";
@@ -117,6 +117,10 @@ interface SearchClientsQuery {
 interface TrainerBlacklistBody {
   clientId?: string;
   reason?: string;
+}
+
+interface PassthroughResponse {
+  setHeader(name: string, value: string): void;
 }
 
 interface TrainerNoSlotRequestsQuery {
@@ -244,7 +248,11 @@ export class MiniAppController {
   @UseGuards(MiniAppAuthGuard)
   @Get("client/trainings/calendar")
   @Header("Content-Type", "text/calendar; charset=utf-8")
-  async downloadClientTrainingCalendar(@MiniAppSession() session: MiniAppSessionPayload, @Query() query: ClientCalendarQuery) {
+  async downloadClientTrainingCalendar(
+    @MiniAppSession() session: MiniAppSessionPayload,
+    @Query() query: ClientCalendarQuery,
+    @Res({ passthrough: true }) response: PassthroughResponse,
+  ) {
     if (!query || typeof query !== "object") {
       throw new BadRequestException("Invalid query");
     }
@@ -254,6 +262,7 @@ export class MiniAppController {
       query.bookingId ?? "",
     );
 
+    response.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
     return file.content;
   }
 
@@ -353,7 +362,11 @@ export class MiniAppController {
   @UseGuards(MiniAppAuthGuard, MiniAppTrainerGuard)
   @Get("trainer/bookings/calendar")
   @Header("Content-Type", "text/calendar; charset=utf-8")
-  async downloadTrainerBookingCalendar(@MiniAppSession() session: MiniAppSessionPayload, @Query() query: ClientCalendarQuery) {
+  async downloadTrainerBookingCalendar(
+    @MiniAppSession() session: MiniAppSessionPayload,
+    @Query() query: ClientCalendarQuery,
+    @Res({ passthrough: true }) response: PassthroughResponse,
+  ) {
     if (!query || typeof query !== "object") {
       throw new BadRequestException("Invalid query");
     }
@@ -363,6 +376,7 @@ export class MiniAppController {
       query.bookingId ?? "",
     );
 
+    response.setHeader("Content-Disposition", `attachment; filename="${file.filename}"`);
     return file.content;
   }
 

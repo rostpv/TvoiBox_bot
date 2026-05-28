@@ -5,6 +5,7 @@ import { MiniAppSessionPayload } from "./mini-app-auth.types";
 
 export interface MiniAppRequest {
   headers: Record<string, string | string[] | undefined>;
+  query?: Record<string, string | string[] | undefined>;
   miniAppSession?: MiniAppSessionPayload;
 }
 
@@ -18,12 +19,19 @@ export class MiniAppAuthGuard implements CanActivate {
     const authorization = Array.isArray(authorizationHeader)
       ? authorizationHeader[0]?.trim() ?? ""
       : authorizationHeader?.trim() ?? "";
+    const queryTokenRaw = request.query?.accessToken;
+    const queryToken = Array.isArray(queryTokenRaw)
+      ? queryTokenRaw[0]?.trim() ?? ""
+      : queryTokenRaw?.trim() ?? "";
 
-    if (!authorization.startsWith("Bearer ")) {
+    const token = authorization.startsWith("Bearer ")
+      ? authorization.slice("Bearer ".length)
+      : queryToken;
+
+    if (!token) {
       throw new UnauthorizedException("Missing Bearer token");
     }
 
-    const token = authorization.slice("Bearer ".length);
     request.miniAppSession = this.miniAppAuthService.verifySessionToken(token);
     return true;
   }

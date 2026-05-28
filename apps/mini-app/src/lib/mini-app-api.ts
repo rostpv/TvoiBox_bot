@@ -331,6 +331,15 @@ export class MiniAppApi {
     return response.blob();
   }
 
+  getClientCalendarFileUrl(bookingId: string): string {
+    if (this.shouldUsePreview()) {
+      throw new Error("Preview mode does not support direct calendar URLs");
+    }
+
+    const token = this.requireToken();
+    return `${this.baseUrl}/mini-app/client/trainings/calendar?bookingId=${encodeURIComponent(bookingId)}&accessToken=${encodeURIComponent(token)}`;
+  }
+
   async downloadTrainerBookingCalendarFile(bookingId: string): Promise<Blob> {
     if (this.shouldUsePreview()) {
       return this.preview.downloadTrainerBookingCalendarFile(this.requireToken(), bookingId);
@@ -352,6 +361,15 @@ export class MiniAppApi {
     }
 
     return response.blob();
+  }
+
+  getTrainerBookingCalendarFileUrl(bookingId: string): string {
+    if (this.shouldUsePreview()) {
+      throw new Error("Preview mode does not support direct calendar URLs");
+    }
+
+    const token = this.requireToken();
+    return `${this.baseUrl}/mini-app/trainer/bookings/calendar?bookingId=${encodeURIComponent(bookingId)}&accessToken=${encodeURIComponent(token)}`;
   }
 
   async requestBooking(payload: { slotId: string; clientComment?: string | null }): Promise<CreateBookingResponse> {
