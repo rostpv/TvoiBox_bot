@@ -36,6 +36,7 @@ export function createBot(token: string, dependencies: CreateBotDependencies) {
     apiBaseUrl: dependencies.config.apiBaseUrl,
     logger: dependencies.logger,
     navigationService,
+    miniAppUrl: dependencies.config.miniAppUrl,
   });
   const slotsApiService = new SlotsApiService(dependencies.config.apiBaseUrl);
   const clientsApiService = new ClientsApiService(

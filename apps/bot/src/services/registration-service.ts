@@ -2,6 +2,8 @@ import { InlineKeyboard } from "grammy";
 
 import type { LoggerLike } from "../common/logger-like";
 import { buildScreenView } from "../menus/main-menu";
+import type { BotRuntimeConfig } from "../config/bot-config";
+import { buildClientMiniAppInlineKeyboard, getClientMiniAppLabel } from "./mini-app-entry";
 import { NavigationService } from "./navigation-service";
 import { ClientProfile, ClientsApiService } from "./clients-api-service";
 import { UserRole } from "./screen-service";
@@ -23,6 +25,7 @@ interface RegistrationServiceDependencies {
   apiBaseUrl: string;
   logger: LoggerLike;
   navigationService: NavigationService;
+  miniAppUrl: BotRuntimeConfig["miniAppUrl"];
 }
 
 const phoneSkipKeyboard = new InlineKeyboard().text("Пропустить телефон", "reg:skip-phone");
@@ -36,11 +39,13 @@ export class RegistrationService {
   private readonly clientsApiService: ClientsApiService;
   private readonly logger: LoggerLike;
   private readonly navigationService: NavigationService;
+  private readonly miniAppUrl: string;
 
   constructor(dependencies: RegistrationServiceDependencies) {
     this.clientsApiService = new ClientsApiService(dependencies.apiBaseUrl);
     this.logger = dependencies.logger;
     this.navigationService = dependencies.navigationService;
+    this.miniAppUrl = dependencies.miniAppUrl;
   }
 
   isRegistrationInProgress(userId: number): boolean {
@@ -299,6 +304,15 @@ export class RegistrationService {
         await context.reply(
           `Регистрация завершена. Добро пожаловать, ${state.fullName}!`,
         );
+        const miniAppKeyboard = buildClientMiniAppInlineKeyboard(this.miniAppUrl);
+        if (miniAppKeyboard) {
+          await context.reply(
+            `Нажми кнопку ниже, чтобы открыть ${getClientMiniAppLabel().toLowerCase()}. Кнопка «Старт» по-прежнему оставляет доступ к сценарию бота.`,
+            {
+              reply_markup: miniAppKeyboard,
+            },
+          );
+        }
         await context.reply(view.text, {
           reply_markup: view.keyboard,
         });

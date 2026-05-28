@@ -4,6 +4,7 @@ import type { Bot, Context } from "grammy";
 import type { LoggerLike } from "../common/logger-like";
 import type { BotRuntimeConfig } from "../config/bot-config";
 import { buildScreenView } from "../menus/main-menu";
+import { buildClientMiniAppInlineKeyboard, getClientMiniAppLabel } from "../services/mini-app-entry";
 import { NavigationService } from "../services/navigation-service";
 import { RegistrationService } from "../services/registration-service";
 import type { ScreenId, UserRole } from "../services/screen-service";
@@ -16,30 +17,24 @@ interface StartHandlerDependencies {
   resolveRole(userId: number): UserRole;
 }
 
-function getClientMiniAppLabel(config: BotRuntimeConfig) {
-  void config;
-  return "Открыть mini app";
-}
-
 function getTrainerMiniAppLabel(config: BotRuntimeConfig) {
   void config;
   return "Открыть тренерский экран";
 }
 
 function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {
-  const miniAppUrl = config.miniAppUrl.trim();
+  const clientMiniAppButton = buildClientMiniAppInlineKeyboard(config.miniAppUrl);
   const trainerMiniAppUrl = config.miniAppTrainerUrl.trim();
 
-  if (!miniAppUrl) {
+  if (!clientMiniAppButton) {
     return null;
   }
 
-  return {
-    inline_keyboard: [
-      [{ text: getClientMiniAppLabel(config), web_app: { url: miniAppUrl } }],
-      ...(trainerMiniAppUrl ? [[{ text: getTrainerMiniAppLabel(config), web_app: { url: trainerMiniAppUrl } }]] : []),
-    ],
-  };
+  if (!trainerMiniAppUrl) {
+    return clientMiniAppButton;
+  }
+
+  return clientMiniAppButton.row().webApp(getTrainerMiniAppLabel(config), trainerMiniAppUrl);
 }
 
 function buildMiniAppReplyKeyboard(config: BotRuntimeConfig) {
