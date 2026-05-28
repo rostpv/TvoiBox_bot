@@ -996,13 +996,30 @@ a {
 }
 
 .header-action-button {
-  min-height: 30px;
-  padding: 0 8px;
+  min-height: 28px;
+  padding: 0 9px;
   font-size: 10px;
   font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   flex: 0 0 auto;
+}
+
+.header-toggle-button {
+  min-height: 28px;
+  padding: 0 9px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.panel-header-subactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .panel-header-copy {
@@ -1121,6 +1138,7 @@ a {
 .trainer-thought-card {
   min-width: 0;
   display: grid;
+  grid-template-rows: auto minmax(22px, auto);
   align-content: start;
   gap: 4px;
   padding: 10px 11px;
@@ -1136,6 +1154,8 @@ a {
 }
 
 .trainer-thought-card strong {
+  display: flex;
+  align-items: flex-end;
   font-size: 16px;
   line-height: 1.16;
   font-weight: 500;
@@ -1990,6 +2010,13 @@ a {
     padding: 9px 12px;
   }
 
+  .panel-header .header-action-button,
+  .panel-header .header-toggle-button {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 10px;
+  }
+
   .icon-button-compact {
     width: 30px;
     min-width: 30px;
@@ -2428,6 +2455,12 @@ a {
     min-height: 30px;
     padding: 0 10px;
     font-size: 11px;
+  }
+
+  .panel-header-slim .header-toggle-button {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 10px;
   }
 
   .panel-header-slim .panel-title {

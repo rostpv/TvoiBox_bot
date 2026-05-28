@@ -689,11 +689,6 @@ export class BookingsService {
                 gte: from,
                 lt: to,
               },
-              endAt: includeArchived
-                ? {
-                    lte: now,
-                  }
-                : undefined,
             },
             training: {
               isNot: null,
@@ -1003,6 +998,8 @@ export class BookingsService {
         data: {
           status: BookingStatus.CANCELLED,
           cancelledAt: now,
+          clientArchivedAt: now,
+          trainerArchivedAt: now,
           clientComment: this.appendClientActionComment(freshBooking.clientComment, "Клиент отменил тренировку", comment),
         },
         include: {
@@ -1652,6 +1649,8 @@ export class BookingsService {
           status: BookingStatus.CANCELLED,
           trainerComment,
           cancelledAt: now,
+          clientArchivedAt: now,
+          trainerArchivedAt: now,
         },
       });
 

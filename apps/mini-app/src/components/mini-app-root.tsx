@@ -1320,7 +1320,7 @@ export function MiniAppRoot() {
                 </button>
                 <div className="panel-header-actions panel-header-actions-tight">
                   <button
-                    className="chip-button chip-button-compact"
+                    className="chip-button chip-button-compact header-toggle-button"
                     data-active={recordsView === "active" ? "true" : "false"}
                     disabled={isBusy}
                     onClick={() => setRecordsView("active")}
@@ -1328,7 +1328,7 @@ export function MiniAppRoot() {
                     Актуальные
                   </button>
                   <button
-                    className="chip-button chip-button-compact"
+                    className="chip-button chip-button-compact header-toggle-button"
                     data-active={recordsView === "archive" ? "true" : "false"}
                     disabled={isBusy}
                     onClick={() => setRecordsView("archive")}

@@ -513,6 +513,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
     text: string,
     onBack: () => void,
     actions?: ReactNode,
+    subActions?: ReactNode,
   ) {
       return (
         <div className="panel-header panel-header-compact panel-header-slim panel-header-top-actions">
@@ -526,6 +527,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
           <div className="panel-header-copy panel-header-copy-wide">
             <h2 className="panel-title">{title}</h2>
             <p className="panel-text">{text}</p>
+            {subActions ? <div className="panel-header-subactions">{subActions}</div> : null}
           </div>
         </div>
       );
@@ -1574,8 +1576,10 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                 >
                   Обновить
                 </button>
+              </>,
+              <div className="panel-header-actions panel-header-actions-tight">
                 <button
-                  className="chip-button chip-button-compact"
+                  className="chip-button chip-button-compact header-toggle-button"
                   data-active={trainingsView === "active" ? "true" : "false"}
                   disabled={isBusy}
                   onClick={() => setTrainingsView("active")}
@@ -1583,14 +1587,14 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   Актуальные
                 </button>
                 <button
-                  className="chip-button chip-button-compact"
+                  className="chip-button chip-button-compact header-toggle-button"
                   data-active={trainingsView === "archive" ? "true" : "false"}
                   disabled={isBusy}
                   onClick={() => setTrainingsView("archive")}
                 >
                   Архив
                 </button>
-              </>,
+              </div>,
             )}
 
             {trainings.length === 0 ? (
