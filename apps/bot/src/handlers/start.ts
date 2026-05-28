@@ -112,6 +112,7 @@ async function handleStart(
   let clientFullName: string | null = null;
 
   if (role === "client") {
+    const miniAppEnabled = Boolean(dependencies.config.miniAppUrl.trim());
     try {
       const profile = await dependencies.registrationService.syncRegisteredClient(
         userId,
@@ -119,14 +120,14 @@ async function handleStart(
       );
       const inProgress = dependencies.registrationService.isRegistrationInProgress(userId);
 
-      if (!profile) {
+      if (!profile && !miniAppEnabled) {
         await dependencies.registrationService.start(context);
         return;
       }
 
-      clientFullName = profile.fullName;
+      clientFullName = profile?.fullName ?? null;
 
-      if (inProgress) {
+      if (profile && inProgress) {
         dependencies.registrationService.clearRegistrationState(userId);
       }
     } catch (error) {
