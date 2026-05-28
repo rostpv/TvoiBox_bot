@@ -1,4 +1,4 @@
-export type CalendarOpenMode = "opened" | "downloaded";
+export type CalendarOpenMode = "shared" | "downloaded";
 
 function isTelegramMobileWebView(): boolean {
   if (typeof window === "undefined") {
@@ -9,7 +9,23 @@ function isTelegramMobileWebView(): boolean {
   return /Telegram/i.test(userAgent) && /Android|iPhone|iPad|iPod/i.test(userAgent);
 }
 
-export function openCalendarFile(blob: Blob, fileName: string): CalendarOpenMode {
+function supportsFileShare(file: File): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") {
+    return false;
+  }
+
+  if (typeof navigator.share !== "function") {
+    return false;
+  }
+
+  if (typeof navigator.canShare === "function") {
+    return navigator.canShare({ files: [file] });
+  }
+
+  return false;
+}
+
+export async function openCalendarFile(blob: Blob, fileName: string): Promise<CalendarOpenMode> {
   const url = window.URL.createObjectURL(blob);
   const releaseUrl = () => {
     window.setTimeout(() => {
@@ -18,16 +34,25 @@ export function openCalendarFile(blob: Blob, fileName: string): CalendarOpenMode
   };
 
   if (isTelegramMobileWebView()) {
+    const file = new File([blob], fileName, { type: "text/calendar;charset=utf-8" });
+    if (supportsFileShare(file)) {
+      await navigator.share({
+        title: "Календарь тренировки",
+        files: [file],
+      });
+      releaseUrl();
+      return "shared";
+    }
+
     const link = document.createElement("a");
     link.href = url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
+    link.download = fileName;
     link.type = "text/calendar";
     document.body.appendChild(link);
     link.click();
     link.remove();
     releaseUrl();
-    return "opened";
+    return "downloaded";
   }
 
   const link = document.createElement("a");

@@ -287,13 +287,14 @@ function RefreshIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+        d="M21 12a9 9 0 1 1-2.64-6.36"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="3.2"
+        strokeWidth="2.4"
       />
+      <path d="M21 3v6h-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
     </svg>
   );
 }
@@ -318,6 +319,23 @@ function CalendarIcon() {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" strokeWidth="2.8" />
       <path d="M8 3v4M16 3v4M4 10h16" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.8" />
+    </svg>
+  );
+}
+
+function CalendarSyncIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="6" width="14" height="13" rx="3" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M8 4v4M14 4v4M4 10h14" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.2" />
+      <path
+        d="M21 14.5a4.5 4.5 0 1 1-1.32-3.18M21 9.5v4h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.2"
+      />
     </svg>
   );
 }
@@ -513,9 +531,9 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       );
   }
 
-  async function runTask(task: () => Promise<void>, successMessage?: string) {
+  async function runTask(task: () => Promise<void>, successMessage?: string, pendingMessage?: string) {
     setIsBusy(true);
-    setMessage(null);
+    setMessage(pendingMessage ? { tone: "info", text: pendingMessage } : null);
 
     try {
       await task();
@@ -524,6 +542,10 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       }
     } catch (error) {
       const normalizedError = error as Error;
+      if (normalizedError.name === "AbortError") {
+        setMessage({ tone: "info", text: "Выбор приложения для календаря отменён." });
+        return;
+      }
       setMessage({ tone: "error", text: normalizeUiErrorMessage(normalizedError) });
     } finally {
       setIsBusy(false);
@@ -708,14 +730,14 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       const blob = await api.downloadTrainerBookingCalendarFile(bookingId);
       const date = new Date(startAt);
       const fileName = `tvoy-box-booking-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}-${String(date.getHours()).padStart(2, "0")}-${String(date.getMinutes()).padStart(2, "0")}.ics`;
-      const openMode = openCalendarFile(blob, fileName);
+      const openMode = await openCalendarFile(blob, fileName);
       setMessage({
         tone: "success",
-        text: openMode === "opened"
-          ? "Файл календаря открыт. Внутри уже добавлены напоминания за 1 день и за 1 час."
-          : "Файл календаря скачан. Внутри уже добавлены напоминания за 1 день и за 1 час.",
+        text: openMode === "shared"
+          ? "Открылось меню выбора приложения для календаря. Напоминания за 1 день и за 1 час уже добавлены в файле."
+          : "Файл календаря скачан. Если Telegram не показал выбор приложения, откройте файл из загрузок."
       });
-    });
+    }, undefined, "Подготавливаем файл календаря...");
   }
 
   async function handleRejectBookingQuick(bookingId: string) {
@@ -794,7 +816,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
         await api.resyncTrainerCalendar({ bookingId: item.bookingId });
       }
       await loadTrainings();
-    }, "Календарь пересинхронизирован по всем актуальным тренировкам.");
+    }, "Календарь пересинхронизирован по всем актуальным тренировкам.", `Пересинхронизируем календарь для ${items.length} трениров${items.length === 1 ? "ки" : items.length >= 2 && items.length <= 4 ? "ок" : "ок"}...`);
   }
 
   async function handleToggleSlot(slot: AvailableSlot) {
@@ -1528,7 +1550,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                     disabled={isBusy}
                     onClick={() => void handleResyncAllTrainings()}
                   >
-                    <CalendarIcon />
+                    <CalendarSyncIcon />
                   </button>
                 ) : null}
                 <button

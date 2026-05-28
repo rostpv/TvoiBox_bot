@@ -180,13 +180,14 @@ function RefreshIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M20 12a8 8 0 1 1-2.34-5.66M20 4v6h-6"
+        d="M21 12a9 9 0 1 1-2.64-6.36"
         fill="none"
         stroke="currentColor"
         strokeLinecap="round"
         strokeLinejoin="round"
-        strokeWidth="3.2"
+        strokeWidth="2.4"
       />
+      <path d="M21 3v6h-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
     </svg>
   );
 }
@@ -764,16 +765,20 @@ export function MiniAppRoot() {
       const blob = await api.downloadClientCalendarFile(bookingId);
       const date = new Date(startAt);
       const fileName = `tvoy-box-training-${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}-${String(date.getHours()).padStart(2, "0")}-${String(date.getMinutes()).padStart(2, "0")}.ics`;
-      const openMode = openCalendarFile(blob, fileName);
+      const openMode = await openCalendarFile(blob, fileName);
       setMessage({
         tone: "success",
-        text: openMode === "opened"
-          ? "Файл календаря открыт. Внутри уже добавлены напоминания за 1 день и за 1 час."
-          : "Файл календаря скачан. Внутри уже добавлены напоминания за 1 день и за 1 час.",
+        text: openMode === "shared"
+          ? "Открылось меню выбора приложения для календаря. Напоминания за 1 день и за 1 час уже добавлены в файле."
+          : "Файл календаря скачан. Если Telegram не показал выбор приложения, откройте файл из загрузок."
       });
     } catch (error) {
       const normalizedError = error as Error;
-      setMessage({ tone: "error", text: normalizedError.message || "Не удалось скачать файл календаря." });
+      if (normalizedError.name === "AbortError") {
+        setMessage({ tone: "info", text: "Выбор приложения для календаря отменён." });
+        return;
+      }
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось открыть файл календаря." });
     } finally {
       setIsBusy(false);
     }
