@@ -83,6 +83,20 @@ function getNumberEnv(
   return parsed;
 }
 
+function getDefaultMiniAppUrl(source: NodeJS.ProcessEnv = process.env): string {
+  const publicAppDomain = source.PUBLIC_APP_DOMAIN?.trim();
+
+  if (!publicAppDomain) {
+    return "";
+  }
+
+  if (/^https?:\/\//iu.test(publicAppDomain)) {
+    return publicAppDomain;
+  }
+
+  return `https://${publicAppDomain}`;
+}
+
 export interface BotRuntimeConfig {
   adminTelegramId: string;
   apiBaseUrl: string;
@@ -109,6 +123,7 @@ export function getBotRuntimeConfig(): BotRuntimeConfig {
   const webhookPath = normalizeWebhookPath(
     getOptionalEnv("BOT_WEBHOOK_PATH", "/telegram/webhook"),
   );
+  const defaultMiniAppUrl = getDefaultMiniAppUrl();
 
   return {
     adminTelegramId,
@@ -119,7 +134,7 @@ export function getBotRuntimeConfig(): BotRuntimeConfig {
     miniAppLabel: getOptionalEnv("BOT_MINI_APP_LABEL", "Открыть mini app"),
     miniAppTrainerLabel: getOptionalEnv("BOT_MINI_APP_TRAINER_LABEL", "Открыть тренерский экран"),
     miniAppTrainerUrl: getOptionalEnv("BOT_MINI_APP_TRAINER_URL", ""),
-    miniAppUrl: getOptionalEnv("BOT_MINI_APP_URL", ""),
+    miniAppUrl: getOptionalEnv("BOT_MINI_APP_URL", defaultMiniAppUrl),
     nodeEnv: getOptionalEnv("NODE_ENV", "development") as RuntimeMode,
     telegramBotToken: getRequiredEnv("TELEGRAM_BOT_TOKEN"),
     trainerTelegramId: getTelegramIdEnv("TRAINER_TELEGRAM_ID", adminTelegramId),
