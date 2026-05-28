@@ -107,6 +107,7 @@ export function createBot(token: string, dependencies: CreateBotDependencies) {
     resolveRole,
     trainerTelegramId: dependencies.config.trainerTelegramId,
     adminTelegramId: dependencies.config.adminTelegramId,
+    miniAppUrl: dependencies.config.miniAppUrl,
   });
 
   bot.on("message:text", async (context) => {

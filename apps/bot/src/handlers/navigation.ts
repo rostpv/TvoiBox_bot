@@ -5,6 +5,7 @@ import type { LoggerLike } from "../common/logger-like";
 import { buildScreenView } from "../menus/main-menu";
 import { BookingsApiService } from "../services/bookings-api-service";
 import { ClientsApiService, ClientProfile } from "../services/clients-api-service";
+import { normalizeMiniAppUrl } from "../services/mini-app-entry";
 import { NavigationService } from "../services/navigation-service";
 import { RegistrationService } from "../services/registration-service";
 import { ScreenId, UserRole, canAccessScreen } from "../services/screen-service";
@@ -22,6 +23,7 @@ interface NavigationHandlerDependencies {
   resolveRole(userId: number): UserRole;
   trainerTelegramId: string;
   adminTelegramId: string;
+  miniAppUrl: string;
 }
 
 interface ClientBookingView {
@@ -1304,6 +1306,29 @@ function buildClientNoSlotView(): ClientNoSlotView {
       "Выбери удобные даты и время кнопками ниже, и я передам запрос тренеру.",
     ].join("\n"),
     keyboard: new InlineKeyboard().text("Выбрать даты и время", "noslot:start").row().text("Назад", "nav:back"),
+  };
+}
+
+function buildClientMainView(dependencies: NavigationHandlerDependencies): { text: string; keyboard: InlineKeyboard } {
+  const view = buildScreenView("client-main", "client");
+  const miniAppUrl = normalizeMiniAppUrl(dependencies.miniAppUrl);
+
+  if (!miniAppUrl) {
+    return view;
+  }
+
+  return {
+    text: view.text,
+    keyboard: new InlineKeyboard()
+      .webApp("Открыть mini app", miniAppUrl)
+      .row()
+      .text("Записаться", "screen:client-booking")
+      .row()
+      .text("Мои тренировки", "screen:client-trainings")
+      .row()
+      .text("Нет подходящего времени", "screen:client-no-slot")
+      .row()
+      .text("О боте", "screen:client-intro"),
   };
 }
 
@@ -2617,6 +2642,12 @@ export function registerNavigationHandler(
 
       let text = staticView.text;
       let keyboard = staticView.keyboard;
+
+      if (openedScreen === "client-main" && role === "client") {
+        const clientMainView = buildClientMainView(dependencies);
+        text = clientMainView.text;
+        keyboard = clientMainView.keyboard;
+      }
 
       if (openedScreen === "admin-main" && role === "admin") {
         const adminMainView = buildAdminMainView();
@@ -6104,6 +6135,12 @@ export function registerNavigationHandler(
 
       let text = staticView.text;
       let keyboard = staticView.keyboard;
+
+      if (targetScreen === "client-main" && role === "client") {
+        const clientMainView = buildClientMainView(dependencies);
+        text = clientMainView.text;
+        keyboard = clientMainView.keyboard;
+      }
 
       if (targetScreen === "admin-main" && role === "admin") {
         const adminMainView = buildAdminMainView();

@@ -100,6 +100,29 @@ function buildClientBotMenuMessage(screenId: ScreenId) {
   return { text, keyboard };
 }
 
+function buildClientBotMenuMessageWithMiniApp(config: BotRuntimeConfig, screenId: ScreenId) {
+  const view = buildClientBotMenuMessage(screenId);
+  const miniAppUrl = normalizeMiniAppUrl(config.miniAppUrl);
+
+  if (screenId !== "client-main" || !miniAppUrl) {
+    return view;
+  }
+
+  return {
+    text: view.text,
+    keyboard: new InlineKeyboard()
+      .webApp("Открыть mini app", miniAppUrl)
+      .row()
+      .text("Записаться", "screen:client-booking")
+      .row()
+      .text("Мои тренировки", "screen:client-trainings")
+      .row()
+      .text("Нет подходящего времени", "screen:client-no-slot")
+      .row()
+      .text("О боте", "screen:client-intro"),
+  };
+}
+
 async function handleStart(
   context: Context,
   dependencies: StartHandlerDependencies,
@@ -166,7 +189,7 @@ async function handleStart(
   });
 
   if (role === "client" && source === "start-text") {
-    const menuMessage = buildClientBotMenuMessage(rootScreen);
+    const menuMessage = buildClientBotMenuMessageWithMiniApp(dependencies.config, rootScreen);
     await context.reply(menuMessage.text, {
       reply_markup: menuMessage.keyboard,
     });
@@ -184,7 +207,7 @@ async function handleStart(
       reply_markup: welcome.inlineKeyboard,
     });
 
-    const menuMessage = buildClientBotMenuMessage(rootScreen);
+    const menuMessage = buildClientBotMenuMessageWithMiniApp(dependencies.config, rootScreen);
     await context.reply(menuMessage.text, {
       reply_markup: menuMessage.keyboard,
     });
