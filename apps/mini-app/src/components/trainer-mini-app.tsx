@@ -1092,13 +1092,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   <h2 className="panel-title">Главное меню</h2>
                   <div className="panel-header-actions panel-header-actions-tight">
                     <button
-                      className="secondary-button secondary-button-compact icon-button-compact"
+                      className="secondary-button secondary-button-compact header-action-button"
                       aria-label="Обновить главную"
                       title="Обновить"
                       disabled={isBusy}
                       onClick={() => void loadHomeData()}
                     >
-                      <RefreshIcon />
+                      Обновить
                     </button>
                   </div>
                 </div>
@@ -1290,13 +1290,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                 <h2 className="panel-title">Заявки</h2>
                 <div className="panel-header-actions panel-header-actions-tight">
                   <button
-                    className="secondary-button secondary-button-compact icon-button-compact"
+                    className="secondary-button secondary-button-compact header-action-button"
                     aria-label="Обновить раздел Заявки"
                     title="Обновить"
                     disabled={isBusy}
                     onClick={() => void loadBookings()}
                   >
-                    <RefreshIcon />
+                    Обновить
                   </button>
                 </div>
               </div>
@@ -1556,23 +1556,23 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               <>
                 {trainingsView === "active" ? (
                   <button
-                    className="secondary-button secondary-button-compact icon-button-compact"
+                    className="secondary-button secondary-button-compact header-action-button"
                     aria-label="Пересинхронизировать календарь"
                     title="Пересинхронизировать календарь"
                     disabled={isBusy}
                     onClick={() => void handleResyncAllTrainings()}
                   >
-                    <CalendarSyncIcon />
+                    Синхр.
                   </button>
                 ) : null}
                 <button
-                  className="secondary-button secondary-button-compact icon-button-compact"
+                  className="secondary-button secondary-button-compact header-action-button"
                   aria-label="Обновить раздел Тренировки"
                   title="Обновить"
                   disabled={isBusy}
                   onClick={() => void loadTrainings(trainingsView)}
                 >
-                  <RefreshIcon />
+                  Обновить
                 </button>
                 <button
                   className="chip-button chip-button-compact"
@@ -1795,13 +1795,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               "Нажимай по часу, чтобы открыть или закрыть слот. Для диапазонов используй форму ниже.",
               () => setScreen("settings"),
               <button
-                className="secondary-button secondary-button-compact icon-button-compact"
+                className="secondary-button secondary-button-compact header-action-button"
                 aria-label="Обновить раздел Слоты"
                 title="Обновить"
                 disabled={isBusy}
                 onClick={() => void loadSlots()}
               >
-                <RefreshIcon />
+                Обновить
               </button>,
             )}
 
@@ -1988,13 +1988,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   <h3 className="panel-title">Текущий чёрный список</h3>
                   <div className="panel-header-actions panel-header-actions-tight">
                     <button
-                      className="secondary-button secondary-button-compact icon-button-compact"
+                      className="secondary-button secondary-button-compact header-action-button"
                       aria-label="Обновить чёрный список"
                       title="Обновить"
                       disabled={isBusy}
                       onClick={() => void loadBlacklist()}
                     >
-                      <RefreshIcon />
+                      Обновить
                     </button>
                   </div>
                 </div>
@@ -2033,13 +2033,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               "Здесь собраны поиск клиентов, чёрный список, слоты и параметры записи.",
               () => setScreen("home"),
               <button
-                className="secondary-button secondary-button-compact icon-button-compact"
+                className="secondary-button secondary-button-compact header-action-button"
                 aria-label="Обновить раздел Настройки"
                 title="Обновить"
                 disabled={isBusy}
                 onClick={() => void loadSettings()}
               >
-                <RefreshIcon />
+                Обновить
               </button>,
             )}
 
@@ -2204,13 +2204,13 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
               "Клиенты оставляют пожелания по дням и времени, когда в сетке нет подходящего окна.",
               () => setScreen("settings"),
               <button
-                className="secondary-button secondary-button-compact icon-button-compact"
+                className="secondary-button secondary-button-compact header-action-button"
                 aria-label="Обновить раздел Запросы без слота"
                 title="Обновить"
                 disabled={isBusy}
                 onClick={() => void loadNoSlotRequests()}
               >
-                <RefreshIcon />
+                Обновить
               </button>,
             )}
 

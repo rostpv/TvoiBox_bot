@@ -1336,13 +1336,13 @@ export function MiniAppRoot() {
                     Архив
                   </button>
                   <button
-                    className="secondary-button secondary-button-compact icon-button-compact"
+                    className="secondary-button secondary-button-compact header-action-button"
                     aria-label="Обновить записи"
                     title="Обновить"
                     disabled={isBusy}
                     onClick={() => void loadRecords()}
                   >
-                    <RefreshIcon />
+                    Обновить
                   </button>
                 </div>
               </div>
