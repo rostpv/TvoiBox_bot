@@ -399,7 +399,7 @@ export function MiniAppRoot() {
       const isLocalPreview = ["localhost", "127.0.0.1"].includes(window.location.hostname);
       const forceManualDev = devMode === "manual";
       const previewRole = devMode === "trainer" ? "trainer" : devMode === "client" ? "client" : null;
-      const canUsePreviewDevLogin = isLocalPreview || Boolean(previewRole);
+      const canUsePreviewDevLogin = isLocalPreview;
 
       if (previewRole && canUsePreviewDevLogin && !forceManualDev) {
         window.sessionStorage.removeItem(SESSION_STORAGE_KEY);

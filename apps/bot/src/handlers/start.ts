@@ -4,7 +4,11 @@ import type { Bot, Context } from "grammy";
 import type { LoggerLike } from "../common/logger-like";
 import type { BotRuntimeConfig } from "../config/bot-config";
 import { buildScreenView } from "../menus/main-menu";
-import { buildClientMiniAppInlineKeyboard, getClientMiniAppLabel, normalizeMiniAppUrl } from "../services/mini-app-entry";
+import {
+  buildClientMiniAppInlineKeyboard,
+  getClientMiniAppLabel,
+  normalizeMiniAppUrl,
+} from "../services/mini-app-entry";
 import { NavigationService } from "../services/navigation-service";
 import { RegistrationService } from "../services/registration-service";
 import type { ScreenId, UserRole } from "../services/screen-service";
@@ -22,7 +26,11 @@ function getTrainerMiniAppLabel(config: BotRuntimeConfig) {
   return "Открыть тренерский экран";
 }
 
-function buildMiniAppInlineKeyboard(config: BotRuntimeConfig) {
+function buildClientMiniAppKeyboard(config: BotRuntimeConfig) {
+  return buildClientMiniAppInlineKeyboard(config.miniAppUrl);
+}
+
+function buildAdminMiniAppInlineKeyboard(config: BotRuntimeConfig) {
   const clientMiniAppButton = buildClientMiniAppInlineKeyboard(config.miniAppUrl);
   const trainerMiniAppUrl = normalizeMiniAppUrl(config.miniAppTrainerUrl);
 
@@ -44,7 +52,7 @@ function buildMiniAppReplyKeyboard(config: BotRuntimeConfig) {
 
 function buildClientWelcomeMessage(config: BotRuntimeConfig, fullName?: string | null) {
   const greeting = fullName?.trim() ? `Привет, ${fullName.trim()}!` : "Привет!";
-  const miniAppInlineKeyboard = buildMiniAppInlineKeyboard(config);
+  const miniAppInlineKeyboard = buildClientMiniAppKeyboard(config);
   const miniAppReplyKeyboard = buildMiniAppReplyKeyboard(config);
 
   return {
@@ -65,7 +73,7 @@ function buildClientWelcomeMessage(config: BotRuntimeConfig, fullName?: string |
 }
 
 function buildAdminStartPrompt(config: BotRuntimeConfig) {
-  const miniAppInlineKeyboard = buildMiniAppInlineKeyboard(config);
+  const miniAppInlineKeyboard = buildAdminMiniAppInlineKeyboard(config);
   const miniAppReplyKeyboard = buildMiniAppReplyKeyboard(config);
 
   return {
@@ -190,7 +198,7 @@ export function registerStartHandler(bot: Bot<Context>, dependencies: StartHandl
   });
 
   bot.command("miniapp", async (context) => {
-    const inlineKeyboard = buildMiniAppInlineKeyboard(dependencies.config);
+    const inlineKeyboard = buildClientMiniAppKeyboard(dependencies.config);
 
     if (!inlineKeyboard) {
       await context.reply("Ссылка mini app для этого бота пока не настроена.");
@@ -203,6 +211,12 @@ export function registerStartHandler(bot: Bot<Context>, dependencies: StartHandl
   });
 
   bot.command("trainerapp", async (context) => {
+    const userId = context.from?.id;
+    if (!userId || dependencies.resolveRole(userId) !== "admin") {
+      await context.reply("Эта команда доступна только тренеру.");
+      return;
+    }
+
     const trainerMiniAppUrl = normalizeMiniAppUrl(dependencies.config.miniAppTrainerUrl);
 
     if (!trainerMiniAppUrl) {
