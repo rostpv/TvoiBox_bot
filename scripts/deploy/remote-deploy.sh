@@ -18,6 +18,64 @@ RELEASE_DIR="${RELEASES_DIR}/${RELEASE_NAME}"
 CURRENT_LINK="${DEPLOY_ROOT}/current"
 TEST_BOT_OVERRIDE_FILE=".env.server.test-bot.override"
 
+read_env_value() {
+  local file_path="$1"
+  local target_key="$2"
+
+  if [[ ! -f "${file_path}" ]]; then
+    return 1
+  fi
+
+  awk -F '=' -v target_key="${target_key}" '
+    $0 ~ "^[[:space:]]*" target_key "=" {
+      sub(/^[^=]*=/, "", $0)
+      print $0
+      exit
+    }
+  ' "${file_path}"
+}
+
+upsert_env_value() {
+  local file_path="$1"
+  local target_key="$2"
+  local target_value="$3"
+
+  if grep -q "^${target_key}=" "${file_path}"; then
+    awk -v target_key="${target_key}" -v target_value="${target_value}" '
+      BEGIN { updated = 0 }
+      index($0, target_key "=") == 1 {
+        print target_key "=" target_value
+        updated = 1
+        next
+      }
+      { print }
+      END {
+        if (updated == 0) {
+          print target_key "=" target_value
+        }
+      }
+    ' "${file_path}" > "${file_path}.tmp"
+    mv "${file_path}.tmp" "${file_path}"
+  else
+    printf '%s=%s\n' "${target_key}" "${target_value}" >> "${file_path}"
+  fi
+}
+
+sync_shared_env_from_test_bot_override() {
+  local override_file_path="$1"
+  local shared_env_file="$2"
+  local key=""
+  local value=""
+
+  for key in TELEGRAM_BOT_TOKEN ADMIN_TELEGRAM_ID TRAINER_TELEGRAM_ID; do
+    value="$(read_env_value "${override_file_path}" "${key}" || true)"
+    if [[ -n "${value}" ]]; then
+      echo "[auto-deploy] Syncing ${key} from ${TEST_BOT_OVERRIDE_FILE} into shared .env.server"
+      upsert_env_value "${shared_env_file}" "${key}" "${value}"
+    fi
+  done
+}
+
 find_existing_test_bot_override() {
   local candidate=""
 
@@ -103,6 +161,10 @@ fi
 if [[ ! -f "${SHARED_DIR}/.env.server" ]]; then
   echo "[auto-deploy] Missing ${SHARED_DIR}/.env.server"
   exit 1
+fi
+
+if [[ -f "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
+  sync_shared_env_from_test_bot_override "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" "${SHARED_DIR}/.env.server"
 fi
 
 if [[ ! -f "${SHARED_DIR}/.secrets/google-service-account.json" ]]; then
