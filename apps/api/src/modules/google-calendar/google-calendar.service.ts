@@ -21,6 +21,10 @@ interface GoogleCalendarEventResponse {
   htmlLink?: string;
 }
 
+interface GoogleCalendarEventsListResponse {
+  items?: GoogleCalendarEventResponse[];
+}
+
 interface CreateOrUpdateEventInput {
   trainingId: string;
   clientName: string;
@@ -84,6 +88,16 @@ export class GoogleCalendarService {
         htmlLink: null,
         mode: "mock",
       };
+    }
+
+    const existingEvent = await this.findEventByTrainingId(input.trainingId);
+    if (existingEvent?.id) {
+      this.logger.info("Existing Google Calendar event found before create, updating it instead", {
+        trainingId: input.trainingId,
+        eventId: existingEvent.id,
+      });
+
+      return this.updateEvent(existingEvent.id, input);
     }
 
     const response = await this.requestCalendar<GoogleCalendarEventResponse>({
@@ -169,6 +183,29 @@ export class GoogleCalendarService {
 
       throw error;
     }
+  }
+
+  private async findEventByTrainingId(trainingId: string): Promise<GoogleCalendarEventResponse | null> {
+    const normalizedTrainingId = trainingId.trim();
+    if (!normalizedTrainingId) {
+      return null;
+    }
+
+    const params = new URLSearchParams({
+      maxResults: "10",
+      showDeleted: "false",
+      singleEvents: "true",
+      privateExtendedProperty: `tvoyBoxTrainingId=${normalizedTrainingId}`,
+    });
+
+    const response = await this.requestCalendar<GoogleCalendarEventsListResponse>({
+      method: "GET",
+      path: `/calendars/${encodeURIComponent(this.appConfigService.values.googleCalendarId)}/events?${params.toString()}`,
+      operation: "find",
+      trainingId: normalizedTrainingId,
+    });
+
+    return response.items?.[0] ?? null;
   }
 
   isGoogleNotFoundError(error: unknown): boolean {
@@ -319,9 +356,9 @@ export class GoogleCalendarService {
   }
 
   private async requestCalendar<T>(options: {
-    method: "POST" | "PUT" | "PATCH" | "DELETE";
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
     path: string;
-    operation: "create" | "update" | "cancel";
+    operation: "find" | "create" | "update" | "cancel";
     trainingId: string;
     body?: Record<string, unknown>;
   }): Promise<T> {
@@ -417,6 +454,11 @@ export class GoogleCalendarService {
             minutes: 60,
           },
         ],
+      },
+      extendedProperties: {
+        private: {
+          tvoyBoxTrainingId: input.trainingId,
+        },
       },
     };
   }
