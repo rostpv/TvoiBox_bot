@@ -10,6 +10,12 @@ interface UpdateTrainerSettingsBody {
   trainerTelegramId?: string;
   bookingHorizonDays?: number;
   sameDayBookingCutoff?: number;
+  workingDays?: string[];
+  workdayStartHour?: number;
+  workdayEndHour?: number;
+  trainingDurationMinutes?: number;
+  workdayStartMinute?: number;
+  workdayEndMinute?: number;
 }
 
 @Controller("trainer-settings")
@@ -38,6 +44,12 @@ export class TrainerSettingsController {
         trainerTelegramId: body.trainerTelegramId ?? "",
         bookingHorizonDays: body.bookingHorizonDays,
         sameDayBookingCutoff: body.sameDayBookingCutoff,
+        workingDays: body.workingDays,
+        workdayStartHour: body.workdayStartHour,
+        workdayEndHour: body.workdayEndHour,
+        trainingDurationMinutes: body.trainingDurationMinutes,
+        workdayStartMinute: body.workdayStartMinute,
+        workdayEndMinute: body.workdayEndMinute,
       }),
     };
   }

@@ -1248,7 +1248,7 @@ export function MiniAppRoot() {
                           disabled={!bookingConsentAccepted}
                           onClick={() => setSelectedSlotId(slot.id)}
                         >
-                          {formatTime(slot.startAt)}
+                          {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </button>
                       ))}
                     </div>

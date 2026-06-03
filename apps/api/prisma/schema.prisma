@@ -207,6 +207,9 @@ model TrainerSettings {
   workingDays          String[] @default(["monday", "wednesday", "friday"])
   workdayStartHour     Int      @default(8)
   workdayEndHour       Int      @default(22)
+  trainingDurationMinutes Int      @default(60)
+  workdayStartMinute  Int      @default(480)
+  workdayEndMinute    Int      @default(1320)
   startMessage         String?
   infoMessage          String?
   createdAt            DateTime @default(now())

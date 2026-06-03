@@ -111,6 +111,9 @@ interface TrainerSettingsBody {
   workingDays?: string[];
   workdayStartHour?: number;
   workdayEndHour?: number;
+  trainingDurationMinutes?: number;
+  workdayStartMinute?: number;
+  workdayEndMinute?: number;
 }
 
 interface SearchClientsQuery {
@@ -617,6 +620,9 @@ export class MiniAppController {
         workingDays: body.workingDays,
         workdayStartHour: body.workdayStartHour,
         workdayEndHour: body.workdayEndHour,
+        trainingDurationMinutes: body.trainingDurationMinutes,
+        workdayStartMinute: body.workdayStartMinute,
+        workdayEndMinute: body.workdayEndMinute,
       }),
     };
   }

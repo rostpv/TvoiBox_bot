@@ -16,6 +16,10 @@ const MOSCOW_HOUR_FORMATTER = new Intl.DateTimeFormat("en-GB", {
   hour: "2-digit",
   hour12: false,
 });
+const MOSCOW_MINUTE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: MOSCOW_TIME_ZONE,
+  minute: "2-digit",
+});
 
 function parseEnv(content) {
   const result = {};
@@ -77,14 +81,23 @@ async function requestJson(url, options) {
   return result.data;
 }
 
-function toFullHourUtc(date) {
+function toNextQuarterHourUtc(date) {
   const result = new Date(date);
-  result.setUTCMinutes(0, 0, 0);
+  const minutes = result.getUTCMinutes();
+  result.setUTCMinutes(Math.ceil(minutes / 15) * 15, 0, 0);
+  if (result.getTime() < date.getTime()) {
+    result.setUTCMinutes(result.getUTCMinutes() + 15, 0, 0);
+  }
+
   return result;
 }
 
 function addHours(date, hours) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
+}
+
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
 function normalizeTelegramId(...candidates) {
@@ -123,8 +136,8 @@ async function getTrainerSettings(apiBaseUrl, trainerTelegramId) {
   return response.settings;
 }
 
-async function openSlot(apiBaseUrl, trainerTelegramId, startAt) {
-  const endAt = addHours(startAt, 1);
+async function openSlot(apiBaseUrl, trainerTelegramId, startAt, durationMinutes) {
+  const endAt = addMinutes(startAt, durationMinutes);
   return requestJson(`${apiBaseUrl}/slots/open`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -180,19 +193,26 @@ function getMoscowHour(date) {
   return Number(MOSCOW_HOUR_FORMATTER.format(date));
 }
 
-function pickNextWorkingSlot(now, settings) {
-  const startSearchAt = toFullHourUtc(addHours(now, settings.sameDayBookingCutoff + 1));
-  const horizonHours = settings.bookingHorizonDays * 24;
+function getMoscowMinuteOfDay(date) {
+  return getMoscowHour(date) * 60 + Number(MOSCOW_MINUTE_FORMATTER.format(date));
+}
 
-  for (let offset = 0; offset < horizonHours; offset += 1) {
-    const candidate = addHours(startSearchAt, offset);
+function pickNextWorkingSlot(now, settings) {
+  const durationMinutes = settings.trainingDurationMinutes ?? 60;
+  const startMinute = settings.workdayStartMinute ?? settings.workdayStartHour * 60;
+  const endMinute = settings.workdayEndMinute ?? settings.workdayEndHour * 60;
+  const startSearchAt = toNextQuarterHourUtc(addHours(now, settings.sameDayBookingCutoff + 1));
+  const horizonSteps = Math.ceil((settings.bookingHorizonDays * 24 * 60) / durationMinutes);
+
+  for (let offset = 0; offset < horizonSteps; offset += 1) {
+    const candidate = addMinutes(startSearchAt, offset * durationMinutes);
     const weekday = getMoscowWeekday(candidate);
-    const hour = getMoscowHour(candidate);
+    const minuteOfDay = getMoscowMinuteOfDay(candidate);
     if (!settings.workingDays.includes(weekday)) {
       continue;
     }
 
-    if (hour < settings.workdayStartHour || hour >= settings.workdayEndHour) {
+    if (minuteOfDay < startMinute || minuteOfDay + durationMinutes > endMinute) {
       continue;
     }
 
@@ -258,7 +278,7 @@ async function main() {
     targetSlotStart = sharedVisibleSlot.startAt;
   } else {
     targetSlotStart = pickNextWorkingSlot(new Date(), trainerSettings);
-    await openSlot(apiBaseUrl, trainerTelegramId, targetSlotStart);
+    await openSlot(apiBaseUrl, trainerTelegramId, targetSlotStart, trainerSettings.trainingDurationMinutes ?? 60);
     firstVisibleSlot = await findAvailableSlot(apiBaseUrl, clientOneTelegramId, targetSlotStart);
     secondVisibleSlot = await findAvailableSlot(apiBaseUrl, clientTwoTelegramId, targetSlotStart);
   }

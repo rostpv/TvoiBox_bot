@@ -239,6 +239,9 @@ function buildDefaultPreviewState(): PreviewState {
       workingDays: [...PREVIEW_WORKING_DAYS],
       workdayStartHour: 9,
       workdayEndHour: 12,
+      trainingDurationMinutes: 60,
+      workdayStartMinute: 9 * 60,
+      workdayEndMinute: 12 * 60,
       updatedAt: now,
     },
     clients: [
@@ -437,9 +440,15 @@ function buildPreviewSlots(state: PreviewState, fromIso: string, toIso: string):
       continue;
     }
 
-    for (let hour = state.settings.workdayStartHour; hour < state.settings.workdayEndHour; hour += 1) {
-      const startAt = createMoscowIso(dateKey, `${String(hour).padStart(2, "0")}:00`);
-      const endAt = addMinutes(startAt, 60);
+    const startMinute = state.settings.workdayStartMinute ?? state.settings.workdayStartHour * 60;
+    const endMinute = state.settings.workdayEndMinute ?? state.settings.workdayEndHour * 60;
+    const durationMinutes = state.settings.trainingDurationMinutes ?? 60;
+
+    for (let minute = startMinute; minute + durationMinutes <= endMinute; minute += durationMinutes) {
+      const hour = Math.floor(minute / 60);
+      const minutes = minute % 60;
+      const startAt = createMoscowIso(dateKey, `${String(hour).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+      const endAt = addMinutes(startAt, durationMinutes);
       if (startAt < fromIso || startAt > toIso) {
         continue;
       }
@@ -1150,6 +1159,9 @@ export class MiniAppPreviewRuntime {
     workingDays?: string[];
     workdayStartHour?: number;
     workdayEndHour?: number;
+    trainingDurationMinutes?: number;
+    workdayStartMinute?: number;
+    workdayEndMinute?: number;
   }): TrainerSettingsResponse {
     const state = readPreviewState();
     state.settings = {

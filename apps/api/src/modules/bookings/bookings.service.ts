@@ -16,6 +16,7 @@ import { VIRTUAL_SLOT_PREFIX } from "../slots/slots.service";
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const MOSCOW_OFFSET_MS = 3 * HOUR_MS;
+const DEFAULT_TRAINING_DURATION_MINUTES = 60;
 type PrismaTransactionClient = Prisma.TransactionClient;
 
 const moscowDateTimeFormatter = new Intl.DateTimeFormat("ru-RU", {
@@ -1619,7 +1620,7 @@ export class BookingsService {
       throw new BadRequestException("trainerComment is required");
     }
 
-    this.assertFullHourBoundary("proposedStartAt", proposedStartAt);
+    this.assertQuarterHourBoundary("proposedStartAt", proposedStartAt);
 
     const now = new Date();
     if (proposedStartAt.getTime() <= now.getTime()) {
@@ -1780,15 +1781,13 @@ export class BookingsService {
     const bookingId = input.bookingId.trim();
     const trainerComment = input.trainerComment.trim();
     const newStartAt = this.parseIsoDate("newStartAt", input.newStartAt);
-    const newEndAt = new Date(newStartAt.getTime() + HOUR_MS);
-
     if (!bookingId) {
       throw new BadRequestException("bookingId is required");
     }
     if (!trainerComment) {
       throw new BadRequestException("trainerComment is required");
     }
-    this.assertFullHourBoundary("newStartAt", newStartAt);
+    this.assertQuarterHourBoundary("newStartAt", newStartAt);
 
     const now = new Date();
     if (newStartAt.getTime() <= now.getTime()) {
@@ -1797,6 +1796,8 @@ export class BookingsService {
 
     const result: BookingActionResult = await this.prismaService.$transaction(async (transaction) => {
       const booking = await this.getConfirmedBookingOrThrow(transaction, bookingId);
+      const settings = await this.ensureTrainerSettings(transaction);
+      const newEndAt = new Date(newStartAt.getTime() + this.getSlotDurationMs(settings));
 
       let targetSlot = await transaction.slot.findUnique({
         where: {
@@ -1882,7 +1883,8 @@ export class BookingsService {
       throw new ConflictException("Proposed time is already in the past");
     }
 
-    const proposedEndAt = new Date(proposedStartAt.getTime() + HOUR_MS);
+    const settings = await this.prismaService.$transaction(async (transaction) => this.ensureTrainerSettings(transaction));
+    const proposedEndAt = new Date(proposedStartAt.getTime() + this.getSlotDurationMs(settings));
     const calendarOperation = booking.training?.calendarEventId ? SyncOperation.UPDATE : SyncOperation.CREATE;
     let calendarSync:
       | Awaited<ReturnType<GoogleCalendarService["createEvent"]>>
@@ -2934,11 +2936,12 @@ export class BookingsService {
   ) {
     const virtualSlot = this.parseVirtualSlotId(slotId);
     if (virtualSlot) {
-      this.assertFullHourBoundary("slotStartAt", virtualSlot.startAt);
-      this.assertFullHourBoundary("slotEndAt", virtualSlot.endAt);
+      this.assertQuarterHourBoundary("slotStartAt", virtualSlot.startAt);
+      this.assertQuarterHourBoundary("slotEndAt", virtualSlot.endAt);
 
-      if (virtualSlot.endAt.getTime() - virtualSlot.startAt.getTime() !== HOUR_MS) {
-        throw new BadRequestException("Virtual slot must be exactly 60 minutes");
+      const settings = await this.ensureTrainerSettings(transaction);
+      if (virtualSlot.endAt.getTime() - virtualSlot.startAt.getTime() !== this.getSlotDurationMs(settings)) {
+        throw new BadRequestException("Virtual slot must match current training duration");
       }
 
       return transaction.slot.upsert({
@@ -3003,6 +3006,12 @@ export class BookingsService {
       data: {
         bookingHorizonDays: 14,
         sameDayBookingCutoff: 0,
+        workingDays: ["monday", "wednesday", "friday"],
+        workdayStartHour: 8,
+        workdayEndHour: 22,
+        trainingDurationMinutes: DEFAULT_TRAINING_DURATION_MINUTES,
+        workdayStartMinute: 8 * 60,
+        workdayEndMinute: 22 * 60,
       },
     });
   }
@@ -3048,7 +3057,7 @@ export class BookingsService {
       return null;
     }
 
-    // New compact format: virtual|<startAtEpochMs>
+    // Legacy compact format: virtual|<startAtEpochMs>
     if (parts.length === 2) {
       const startMs = Number(startRaw);
       if (!Number.isFinite(startMs)) {
@@ -3060,6 +3069,24 @@ export class BookingsService {
 
       if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
         throw new BadRequestException("Virtual slot id contains invalid date");
+      }
+
+      return { startAt, endAt };
+    }
+
+    // Current compact format: virtual|<startAtEpochMs>|<endAtEpochMs>
+    if (parts.length === 3 && /^\d+$/.test(startRaw) && /^\d+$/.test(endRaw ?? "")) {
+      const startMs = Number(startRaw);
+      const endMs = Number(endRaw);
+      const startAt = new Date(startMs);
+      const endAt = new Date(endMs);
+
+      if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime())) {
+        throw new BadRequestException("Virtual slot id contains invalid date");
+      }
+
+      if (endAt.getTime() <= startAt.getTime()) {
+        throw new BadRequestException("Virtual slot has invalid range");
       }
 
       return { startAt, endAt };
@@ -3092,13 +3119,17 @@ export class BookingsService {
       : actionLine;
   }
 
-  private assertFullHourBoundary(fieldName: string, date: Date): void {
+  private getSlotDurationMs(settings: { trainingDurationMinutes?: number }): number {
+    return (settings.trainingDurationMinutes ?? DEFAULT_TRAINING_DURATION_MINUTES) * 60 * 1000;
+  }
+
+  private assertQuarterHourBoundary(fieldName: string, date: Date): void {
     if (
-      date.getUTCMinutes() !== 0 ||
+      date.getUTCMinutes() % 15 !== 0 ||
       date.getUTCSeconds() !== 0 ||
       date.getUTCMilliseconds() !== 0
     ) {
-      throw new BadRequestException(`${fieldName} must be on full hour boundary`);
+      throw new BadRequestException(`${fieldName} must be on 15-minute boundary`);
     }
   }
 }

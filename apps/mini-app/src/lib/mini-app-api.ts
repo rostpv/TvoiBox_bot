@@ -32,6 +32,9 @@ export interface TrainerSettingsDto {
   workingDays: string[];
   workdayStartHour: number;
   workdayEndHour: number;
+  trainingDurationMinutes: number;
+  workdayStartMinute: number;
+  workdayEndMinute: number;
   updatedAt: string;
 }
 
@@ -690,6 +693,9 @@ export class MiniAppApi {
     workingDays?: string[];
     workdayStartHour?: number;
     workdayEndHour?: number;
+    trainingDurationMinutes?: number;
+    workdayStartMinute?: number;
+    workdayEndMinute?: number;
   }): Promise<TrainerSettingsResponse> {
     if (this.shouldUsePreview()) {
       return this.preview.updateTrainerSettings(payload);

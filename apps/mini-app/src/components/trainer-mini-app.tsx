@@ -29,8 +29,9 @@ interface SettingsFormState {
   bookingHorizonDays: string;
   sameDayBookingCutoff: string;
   workingDays: string[];
-  workdayStartHour: string;
-  workdayEndHour: string;
+  trainingDurationMinutes: string;
+  workdayStartTime: string;
+  workdayEndTime: string;
 }
 
 interface SlotRangeState {
@@ -63,7 +64,15 @@ const WEEKDAY_LABELS: Record<string, string> = {
 };
 
 const WEEKDAY_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) => index);
+const TRAINING_DURATION_OPTIONS = [
+  { value: 30, label: "30 мин" },
+  { value: 45, label: "45 мин" },
+  { value: 60, label: "1 час" },
+  { value: 75, label: "1 час 15 мин" },
+  { value: 90, label: "1 час 30 мин" },
+  { value: 105, label: "1 час 45 мин" },
+  { value: 120, label: "2 часа" },
+];
 const MOSCOW_TIME_ZONE = "Europe/Moscow";
 
 function formatMoscowInputParts(date: Date): { year: string; month: string; day: string; hour: string; minute: string } {
@@ -124,6 +133,33 @@ function formatDayLabel(dateIso: string): string {
 function toLocalDateTimeInputValue(date: Date): string {
   const parts = formatMoscowInputParts(date);
   return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+}
+
+function minutesToTimeInput(minutes: number): string {
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, Math.min(24 * 60, Math.trunc(minutes))) : 0;
+  const hours = Math.floor(safeMinutes / 60);
+  const mins = safeMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+}
+
+function parseTimeInputToMinutes(value: string): number | null {
+  const match = value.trim().match(/^(\d{2}):(\d{2})$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, rawHour, rawMinute] = match;
+  const hour = Number(rawHour);
+  const minute = Number(rawMinute);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 24 || minute < 0 || minute > 59) {
+    return null;
+  }
+
+  if (hour === 24 && minute !== 0) {
+    return null;
+  }
+
+  return hour * 60 + minute;
 }
 
 function toIsoDateTimeOrThrow(value: string): string {
@@ -415,8 +451,9 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
     bookingHorizonDays: "14",
     sameDayBookingCutoff: "0",
     workingDays: [...WEEKDAY_ORDER],
-    workdayStartHour: "8",
-    workdayEndHour: "22",
+    trainingDurationMinutes: "60",
+    workdayStartTime: "08:00",
+    workdayEndTime: "22:00",
   });
   const [settingsMeta, setSettingsMeta] = useState<TrainerSettingsDto>({
     bookingHorizonDays: 14,
@@ -424,6 +461,9 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
     workingDays: ["monday", "wednesday", "friday"],
     workdayStartHour: 8,
     workdayEndHour: 22,
+    trainingDurationMinutes: 60,
+    workdayStartMinute: 480,
+    workdayEndMinute: 1320,
     updatedAt: new Date().toISOString(),
   });
   const [clientSearchQuery, setClientSearchQuery] = useState("");
@@ -615,8 +655,9 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
         bookingHorizonDays: String(response.settings.bookingHorizonDays),
         sameDayBookingCutoff: String(response.settings.sameDayBookingCutoff),
         workingDays: [...response.settings.workingDays],
-        workdayStartHour: String(response.settings.workdayStartHour),
-        workdayEndHour: String(response.settings.workdayEndHour),
+        trainingDurationMinutes: String(response.settings.trainingDurationMinutes ?? 60),
+        workdayStartTime: minutesToTimeInput(response.settings.workdayStartMinute ?? response.settings.workdayStartHour * 60),
+        workdayEndTime: minutesToTimeInput(response.settings.workdayEndMinute ?? response.settings.workdayEndHour * 60),
       });
     });
   }
@@ -895,13 +936,15 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
   async function handleSaveSettings() {
     const bookingHorizonDays = Number(settingsForm.bookingHorizonDays);
     const sameDayBookingCutoff = Number(settingsForm.sameDayBookingCutoff);
-    const workdayStartHour = Number(settingsForm.workdayStartHour);
-    const workdayEndHour = Number(settingsForm.workdayEndHour);
+    const trainingDurationMinutes = Number(settingsForm.trainingDurationMinutes);
+    const workdayStartMinute = parseTimeInputToMinutes(settingsForm.workdayStartTime);
+    const workdayEndMinute = parseTimeInputToMinutes(settingsForm.workdayEndTime);
     if (
       !Number.isInteger(bookingHorizonDays)
       || !Number.isInteger(sameDayBookingCutoff)
-      || !Number.isInteger(workdayStartHour)
-      || !Number.isInteger(workdayEndHour)
+      || !Number.isInteger(trainingDurationMinutes)
+      || workdayStartMinute === null
+      || workdayEndMinute === null
     ) {
       setMessage({ tone: "error", text: "Настройки должны быть целыми числами." });
       return;
@@ -910,8 +953,17 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       setMessage({ tone: "error", text: "Выберите хотя бы один рабочий день." });
       return;
     }
-    if (workdayEndHour <= workdayStartHour) {
+    if (workdayStartMinute % 15 !== 0 || workdayEndMinute % 15 !== 0) {
+      setMessage({ tone: "error", text: "Время работы должно быть кратно 15 минутам." });
+      return;
+    }
+    if (workdayEndMinute <= workdayStartMinute) {
       setMessage({ tone: "error", text: "Конец рабочего времени должен быть позже начала." });
+      return;
+    }
+
+    if (workdayEndMinute - workdayStartMinute < trainingDurationMinutes) {
+      setMessage({ tone: "error", text: "Рабочий интервал должен вмещать хотя бы одну тренировку." });
       return;
     }
 
@@ -920,16 +972,18 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
         bookingHorizonDays,
         sameDayBookingCutoff,
         workingDays: settingsForm.workingDays,
-        workdayStartHour,
-        workdayEndHour,
+        trainingDurationMinutes,
+        workdayStartMinute,
+        workdayEndMinute,
       });
       setSettingsMeta(response.settings);
       setSettingsForm({
         bookingHorizonDays: String(response.settings.bookingHorizonDays),
         sameDayBookingCutoff: String(response.settings.sameDayBookingCutoff),
         workingDays: [...response.settings.workingDays],
-        workdayStartHour: String(response.settings.workdayStartHour),
-        workdayEndHour: String(response.settings.workdayEndHour),
+        trainingDurationMinutes: String(response.settings.trainingDurationMinutes ?? trainingDurationMinutes),
+        workdayStartTime: minutesToTimeInput(response.settings.workdayStartMinute ?? workdayStartMinute),
+        workdayEndTime: minutesToTimeInput(response.settings.workdayEndMinute ?? workdayEndMinute),
       });
     }, "Настройки записи сохранены.");
   }
@@ -1854,7 +1908,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                           onClick={() => void handleToggleSlot(slot)}
                           title={slot.status}
                         >
-                          {formatTime(slot.startAt)}
+                          {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
                         </button>
                       ))}
                     </div>
@@ -2091,32 +2145,40 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   <div className="form-grid form-grid-split">
                     <label className="field">
                       <span className="field-label">С</span>
-                      <select
-                        value={settingsForm.workdayStartHour}
-                        onChange={(event) => setSettingsForm((current) => ({ ...current, workdayStartHour: event.target.value }))}
-                      >
-                        {HOUR_OPTIONS.map((hour) => (
-                          <option key={hour} value={hour}>
-                            {String(hour).padStart(2, "0")}:00
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        type="time"
+                        step={900}
+                        value={settingsForm.workdayStartTime}
+                        onChange={(event) => setSettingsForm((current) => ({ ...current, workdayStartTime: event.target.value }))}
+                      />
                     </label>
                     <label className="field">
                       <span className="field-label">До</span>
-                      <select
-                        value={settingsForm.workdayEndHour}
-                        onChange={(event) => setSettingsForm((current) => ({ ...current, workdayEndHour: event.target.value }))}
-                      >
-                        {[...HOUR_OPTIONS, 24].map((hour) => (
-                          <option key={hour} value={hour}>
-                            {hour === 24 ? "24:00" : `${String(hour).padStart(2, "0")}:00`}
-                          </option>
-                        ))}
-                      </select>
+                      <input
+                        type="time"
+                        step={900}
+                        value={settingsForm.workdayEndTime}
+                        onChange={(event) => setSettingsForm((current) => ({ ...current, workdayEndTime: event.target.value }))}
+                      />
                     </label>
                   </div>
                 </div>
+              </div>
+
+              <div className="form-grid form-grid-split">
+                <label className="field">
+                  <span className="field-label">Длительность тренировки</span>
+                  <select
+                    value={settingsForm.trainingDurationMinutes}
+                    onChange={(event) => setSettingsForm((current) => ({ ...current, trainingDurationMinutes: event.target.value }))}
+                  >
+                    {TRAINING_DURATION_OPTIONS.map((duration) => (
+                      <option key={duration.value} value={duration.value}>
+                        {duration.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </div>
 
               <div className="record-actions">

@@ -4,10 +4,15 @@ import { BookingStatus, Prisma, SlotStatus, TrainingStatus } from "@prisma/clien
 import { AppConfigService } from "../../config/app-config.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
-const SLOT_DURATION_MS = 60 * 60 * 1000;
-const DAY_MS = 24 * SLOT_DURATION_MS;
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const SLOT_DURATION_MS = HOUR_MS;
+const DAY_MS = 24 * HOUR_MS;
 const MOSCOW_TIME_ZONE = "Europe/Moscow";
 export const VIRTUAL_SLOT_PREFIX = "virtual";
+const DEFAULT_TRAINING_DURATION_MINUTES = 60;
+const DEFAULT_WORKDAY_START_MINUTE = 8 * 60;
+const DEFAULT_WORKDAY_END_MINUTE = 22 * 60;
 
 export interface OpenSlotsInput {
   trainerTelegramId: string;
@@ -97,9 +102,11 @@ export class SlotsService {
   async openSlots(input: OpenSlotsInput): Promise<OpenSlotsResult> {
     this.ensureTrainerAccess(input.trainerTelegramId);
 
+    const settings = await this.ensureTrainerSettings();
     const startAt = this.parseIsoDate("startAt", input.startAt);
-    const endAt = input.endAt ? this.parseIsoDate("endAt", input.endAt) : new Date(startAt.getTime() + SLOT_DURATION_MS);
-    const ranges = this.buildSlotRanges(startAt, endAt);
+    const slotDurationMs = this.getSlotDurationMs(settings);
+    const endAt = input.endAt ? this.parseIsoDate("endAt", input.endAt) : new Date(startAt.getTime() + slotDurationMs);
+    const ranges = this.buildSlotRanges(startAt, endAt, slotDurationMs);
 
     let created = 0;
     let reopened = 0;
@@ -235,14 +242,15 @@ export class SlotsService {
       endAt = normalizedEndAt;
     }
 
-    this.assertFullHourBoundary("startAt", startAt);
-    this.assertFullHourBoundary("endAt", endAt);
+    this.assertQuarterHourBoundary("startAt", startAt);
+    this.assertQuarterHourBoundary("endAt", endAt);
 
     if (endAt.getTime() <= startAt.getTime()) {
       throw new BadRequestException("endAt must be greater than startAt");
     }
 
-    const ranges = this.buildSlotRanges(startAt, endAt);
+    const settings = await this.ensureTrainerSettings();
+    const ranges = this.buildSlotRanges(startAt, endAt, this.getSlotDurationMs(settings));
     let closed = 0;
     let skippedBooked = 0;
 
@@ -304,10 +312,12 @@ export class SlotsService {
   async reopenSlots(input: OpenSlotsInput): Promise<ReopenSlotsResult> {
     this.ensureTrainerAccess(input.trainerTelegramId);
 
+    const settings = await this.ensureTrainerSettings();
     const startAt = this.parseIsoDate("startAt", input.startAt);
-    const endAt = input.endAt ? this.parseIsoDate("endAt", input.endAt) : new Date(startAt.getTime() + SLOT_DURATION_MS);
-    this.assertFullHourBoundary("startAt", startAt);
-    this.assertFullHourBoundary("endAt", endAt);
+    const slotDurationMs = this.getSlotDurationMs(settings);
+    const endAt = input.endAt ? this.parseIsoDate("endAt", input.endAt) : new Date(startAt.getTime() + slotDurationMs);
+    this.assertQuarterHourBoundary("startAt", startAt);
+    this.assertQuarterHourBoundary("endAt", endAt);
     if (endAt.getTime() <= startAt.getTime()) {
       throw new BadRequestException("endAt must be greater than startAt");
     }
@@ -392,15 +402,15 @@ export class SlotsService {
       return [];
     }
 
-    const slotFrom = this.roundUpToFullHour(from);
-    if (slotFrom.getTime() >= to.getTime()) {
+    const slotRanges = this.buildScheduledSlotRanges(from, to, settings);
+    if (slotRanges.length === 0) {
       return [];
     }
 
     const explicitSlots = await this.prismaService.slot.findMany({
       where: {
         startAt: {
-          gte: slotFrom,
+          gte: slotRanges[0].startAt,
           lt: to,
         },
       },
@@ -419,17 +429,13 @@ export class SlotsService {
     const nowMoscowDateKey = this.getMoscowDateKey(now);
 
     const available: SlotDto[] = [];
-    for (let cursor = slotFrom.getTime(); cursor < to.getTime(); cursor += SLOT_DURATION_MS) {
-      const startAt = new Date(cursor);
-      const endAt = new Date(cursor + SLOT_DURATION_MS);
+    for (const range of slotRanges) {
+      const startAt = range.startAt;
+      const endAt = range.endAt;
       const key = this.getSlotKey(startAt, endAt);
       const explicit = explicitSlotsByKey.get(key);
 
       if (startAt.getTime() < now.getTime()) {
-        continue;
-      }
-
-      if (!this.isWithinWorkingSchedule(startAt, settings)) {
         continue;
       }
 
@@ -465,8 +471,8 @@ export class SlotsService {
     const from = this.parseIsoDate("from", input.from);
     const to = this.parseIsoDate("to", input.to);
 
-    this.assertFullHourBoundary("from", from);
-    this.assertFullHourBoundary("to", to);
+    this.assertQuarterHourBoundary("from", from);
+    this.assertQuarterHourBoundary("to", to);
     if (to.getTime() <= from.getTime()) {
       throw new BadRequestException("to must be greater than from");
     }
@@ -495,15 +501,11 @@ export class SlotsService {
     }
 
     const result: SlotDto[] = [];
-    for (let cursor = from.getTime(); cursor < to.getTime(); cursor += SLOT_DURATION_MS) {
-      const startAt = new Date(cursor);
-      const endAt = new Date(cursor + SLOT_DURATION_MS);
+    for (const range of this.buildScheduledSlotRanges(from, to, settings)) {
+      const startAt = range.startAt;
+      const endAt = range.endAt;
       const key = this.getSlotKey(startAt, endAt);
       const explicit = explicitSlotsByKey.get(key);
-
-      if (!this.isWithinWorkingSchedule(startAt, settings)) {
-        continue;
-      }
 
       if (explicit) {
         result.push({
@@ -542,7 +544,7 @@ export class SlotsService {
     const now = new Date();
     const settings = await this.ensureTrainerSettings();
     const defaultTo = this.getBookingHorizonExclusiveEnd(now, settings.bookingHorizonDays);
-    const from = this.roundUpToFullHour(now);
+    const from = this.roundUpToNextQuarterHour(now);
     const to = defaultTo;
 
     if (to.getTime() <= from.getTime()) {
@@ -603,7 +605,7 @@ export class SlotsService {
 
     const now = new Date();
     const settings = await this.ensureTrainerSettings();
-    const from = this.roundUpToFullHour(now);
+    const from = this.roundUpToNextQuarterHour(now);
     const to = this.getBookingHorizonExclusiveEnd(now, settings.bookingHorizonDays);
 
     const closedSlots = await this.prismaService.slot.findMany({
@@ -689,40 +691,39 @@ export class SlotsService {
     return date;
   }
 
-  private buildSlotRanges(startAt: Date, endAt: Date): Array<{ startAt: Date; endAt: Date }> {
-    this.assertFullHourBoundary("startAt", startAt);
-    this.assertFullHourBoundary("endAt", endAt);
+  private buildSlotRanges(startAt: Date, endAt: Date, slotDurationMs: number): Array<{ startAt: Date; endAt: Date }> {
+    this.assertQuarterHourBoundary("startAt", startAt);
+    this.assertQuarterHourBoundary("endAt", endAt);
 
     if (endAt.getTime() <= startAt.getTime()) {
       throw new BadRequestException("endAt must be greater than startAt");
     }
 
-    const duration = endAt.getTime() - startAt.getTime();
-    if (duration % SLOT_DURATION_MS !== 0) {
-      throw new BadRequestException("Range must be split into 60-minute slots");
-    }
-
     const result: Array<{ startAt: Date; endAt: Date }> = [];
     let cursor = startAt.getTime();
 
-    while (cursor < endAt.getTime()) {
+    while (cursor + slotDurationMs <= endAt.getTime()) {
       result.push({
         startAt: new Date(cursor),
-        endAt: new Date(cursor + SLOT_DURATION_MS),
+        endAt: new Date(cursor + slotDurationMs),
       });
-      cursor += SLOT_DURATION_MS;
+      cursor += slotDurationMs;
+    }
+
+    if (result.length === 0) {
+      throw new BadRequestException("Range must fit at least one training slot");
     }
 
     return result;
   }
 
-  private assertFullHourBoundary(fieldName: string, date: Date): void {
+  private assertQuarterHourBoundary(fieldName: string, date: Date): void {
     if (
-      date.getUTCMinutes() !== 0 ||
+      date.getUTCMinutes() % 15 !== 0 ||
       date.getUTCSeconds() !== 0 ||
       date.getUTCMilliseconds() !== 0
     ) {
-      throw new BadRequestException(`${fieldName} must be on full hour boundary`);
+      throw new BadRequestException(`${fieldName} must be on 15-minute boundary`);
     }
   }
 
@@ -739,35 +740,60 @@ export class SlotsService {
         workingDays: ["monday", "wednesday", "friday"],
         workdayStartHour: 8,
         workdayEndHour: 22,
+        trainingDurationMinutes: DEFAULT_TRAINING_DURATION_MINUTES,
+        workdayStartMinute: DEFAULT_WORKDAY_START_MINUTE,
+        workdayEndMinute: DEFAULT_WORKDAY_END_MINUTE,
       },
     });
   }
 
-  private isWithinWorkingSchedule(
-    date: Date,
+  private buildScheduledSlotRanges(
+    from: Date,
+    to: Date,
     settings: {
       workingDays: string[];
       workdayStartHour: number;
       workdayEndHour: number;
+      trainingDurationMinutes?: number;
+      workdayStartMinute?: number;
+      workdayEndMinute?: number;
     },
-  ): boolean {
-    const weekday = moscowWeekdayFormatter.format(date).toLowerCase();
-    if (!settings.workingDays.includes(weekday)) {
-      return false;
+  ): Array<{ startAt: Date; endAt: Date }> {
+    const ranges: Array<{ startAt: Date; endAt: Date }> = [];
+    const slotDurationMs = this.getSlotDurationMs(settings);
+    const startMinute = this.getWorkdayStartMinute(settings);
+    const endMinute = this.getWorkdayEndMinute(settings);
+
+    let dayStart = this.getMoscowStartOfDay(from);
+    if (dayStart.getTime() + DAY_MS <= from.getTime()) {
+      dayStart = new Date(dayStart.getTime() + DAY_MS);
     }
 
-    const localHour = this.getMoscowHour(date);
-    return localHour >= settings.workdayStartHour && localHour < settings.workdayEndHour;
-  }
+    while (dayStart.getTime() < to.getTime()) {
+      const weekday = moscowWeekdayFormatter.format(dayStart).toLowerCase();
+      if (settings.workingDays.includes(weekday)) {
+        const workdayStart = new Date(dayStart.getTime() + startMinute * MINUTE_MS);
+        const workdayEnd = new Date(dayStart.getTime() + endMinute * MINUTE_MS);
 
-  private getMoscowHour(date: Date): number {
-    const parts = new Intl.DateTimeFormat("en-GB", {
-      timeZone: MOSCOW_TIME_ZONE,
-      hour: "2-digit",
-      hour12: false,
-    }).formatToParts(date);
+        for (
+          let cursor = workdayStart.getTime();
+          cursor + slotDurationMs <= workdayEnd.getTime();
+          cursor += slotDurationMs
+        ) {
+          const startAt = new Date(cursor);
+          const endAt = new Date(cursor + slotDurationMs);
+          if (endAt.getTime() <= from.getTime() || startAt.getTime() >= to.getTime()) {
+            continue;
+          }
 
-    return Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+          ranges.push({ startAt, endAt });
+        }
+      }
+
+      dayStart = new Date(dayStart.getTime() + DAY_MS);
+    }
+
+    return ranges;
   }
 
   private getMoscowDateKey(date: Date): string {
@@ -783,14 +809,42 @@ export class SlotsService {
     return `${year}-${month}-${day}`;
   }
 
-  private roundUpToFullHour(date: Date): Date {
+  private roundUpToNextQuarterHour(date: Date): Date {
     const rounded = new Date(date);
-    rounded.setUTCMinutes(0, 0, 0);
+    const minutes = rounded.getUTCMinutes();
+    rounded.setUTCMinutes(Math.ceil(minutes / 15) * 15, 0, 0);
     if (rounded.getTime() < date.getTime()) {
-      rounded.setUTCHours(rounded.getUTCHours() + 1);
+      rounded.setUTCMinutes(rounded.getUTCMinutes() + 15, 0, 0);
     }
 
     return rounded;
+  }
+
+  private getSlotDurationMs(settings: { trainingDurationMinutes?: number }): number {
+    const minutes = settings.trainingDurationMinutes ?? DEFAULT_TRAINING_DURATION_MINUTES;
+    return minutes * MINUTE_MS;
+  }
+
+  private getWorkdayStartMinute(settings: { workdayStartHour: number; workdayStartMinute?: number }): number {
+    if (
+      typeof settings.workdayStartMinute === "number"
+      && !(settings.workdayStartMinute === DEFAULT_WORKDAY_START_MINUTE && settings.workdayStartHour !== 8)
+    ) {
+      return settings.workdayStartMinute;
+    }
+
+    return settings.workdayStartHour * 60;
+  }
+
+  private getWorkdayEndMinute(settings: { workdayEndHour: number; workdayEndMinute?: number }): number {
+    if (
+      typeof settings.workdayEndMinute === "number"
+      && !(settings.workdayEndMinute === DEFAULT_WORKDAY_END_MINUTE && settings.workdayEndHour !== 22)
+    ) {
+      return settings.workdayEndMinute;
+    }
+
+    return settings.workdayEndHour * 60;
   }
 
   private getBookingHorizonExclusiveEnd(now: Date, bookingHorizonDays: number): Date {
@@ -806,7 +860,7 @@ export class SlotsService {
   }
 
   private toVirtualSlotId(startAt: Date, endAt: Date): string {
-    return `${VIRTUAL_SLOT_PREFIX}|${startAt.getTime()}`;
+    return `${VIRTUAL_SLOT_PREFIX}|${startAt.getTime()}|${endAt.getTime()}`;
   }
 
   private toSlotDto(slot: {
@@ -844,6 +898,6 @@ export class SlotsService {
       return startOfDay;
     }
 
-    return new Date(startOfDay.getTime() + 24 * SLOT_DURATION_MS);
+    return new Date(startOfDay.getTime() + DAY_MS);
   }
 }
