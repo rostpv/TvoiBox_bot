@@ -11,6 +11,8 @@
 - Deploy user: `deploy`
 - Deploy root: `/opt/stack/tvoy-box-bot-deploy`
 
+Передача проекта новому владельцу завершена. Итоговый прогресс и зафиксированные аккаунты: `docs/handover-progress.md`.
+
 ## Проверить публичные адреса
 
 ```bash
@@ -51,6 +53,12 @@ GitHub Actions secrets:
 - `VPS_USER`
 - `VPS_SSH_PRIVATE_KEY`
 - `VPS_KNOWN_HOSTS`
+
+Последние зафиксированные production-деплои:
+
+- run #18, `e862743` - настраиваемая длительность тренировки и слоты с минутами.
+- run #19, `222f474` - повторный production deploy после fallback-проверки.
+- run #20, `db47c54` - визуальная правка отступов в настройках тренера.
 
 ## Где лежат production-секреты на VPS
 

@@ -14,6 +14,8 @@ Production-проект Telegram-бота и Telegram Mini App для запис
 
 Все production-деплои идут из `main` через GitHub Actions.
 
+Текущий статус передачи: завершена, см. `docs/handover-progress.md`.
+
 ## Что внутри
 
 - `apps/api` - backend API на NestJS.
@@ -64,8 +66,10 @@ corepack pnpm dev:mini-app
 
 ## Важные документы
 
+- `docs/handover-progress.md` - итоговый прогресс передачи проекта новому владельцу.
 - `docs/production-ops-runbook.md` - эксплуатация production.
 - `docs/owner-production-check.md` - короткий чек-лист проверки владельцем.
+- `docs/post-handover-backlog.md` - выполненные после передачи задачи и будущий backlog.
 
 ## Секреты
 
