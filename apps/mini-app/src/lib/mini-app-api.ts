@@ -221,7 +221,7 @@ function isAllowedApiBaseUrl(value: string): boolean {
   try {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase();
-    return url.protocol === "https:" && (hostname === "anyatobolova.ru" || hostname.endsWith(".anyatobolova.ru"))
+    return url.protocol === "https:" && (hostname === "tvoybox.ru" || hostname.endsWith(".tvoybox.ru"))
       || url.protocol === "http:" && (hostname === "localhost" || hostname === "127.0.0.1");
   } catch {
     return false;

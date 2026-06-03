@@ -2,106 +2,14 @@
 set -euo pipefail
 
 DEPLOY_ROOT="${DEPLOY_ROOT:-/opt/stack/tvoy-box-bot-deploy}"
-LEGACY_ROOT="${LEGACY_ROOT:-/opt/stack/tvoy-box-bot}"
-BOOTSTRAP_ENV_ROOT="${BOOTSTRAP_ENV_ROOT:-${LEGACY_ROOT}}"
-BOOTSTRAP_SECRETS_ROOT="${BOOTSTRAP_SECRETS_ROOT:-${LEGACY_ROOT}}"
-BOOTSTRAP_LOGS_ROOT="${BOOTSTRAP_LOGS_ROOT:-${LEGACY_ROOT}}"
 RELEASE_NAME="${RELEASE_NAME:?RELEASE_NAME is required}"
 RELEASE_ARCHIVE="${RELEASE_ARCHIVE:?RELEASE_ARCHIVE is required}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
-RESTART_TEST_BOT="${RESTART_TEST_BOT:-false}"
-REQUIRE_TEST_BOT_OVERRIDE="${REQUIRE_TEST_BOT_OVERRIDE:-false}"
 
 RELEASES_DIR="${DEPLOY_ROOT}/releases"
 SHARED_DIR="${DEPLOY_ROOT}/shared"
 RELEASE_DIR="${RELEASES_DIR}/${RELEASE_NAME}"
 CURRENT_LINK="${DEPLOY_ROOT}/current"
-TEST_BOT_OVERRIDE_FILE=".env.server.test-bot.override"
-
-read_env_value() {
-  local file_path="$1"
-  local target_key="$2"
-
-  if [[ ! -f "${file_path}" ]]; then
-    return 1
-  fi
-
-  awk -F '=' -v target_key="${target_key}" '
-    $0 ~ "^[[:space:]]*" target_key "=" {
-      sub(/^[^=]*=/, "", $0)
-      print $0
-      exit
-    }
-  ' "${file_path}"
-}
-
-upsert_env_value() {
-  local file_path="$1"
-  local target_key="$2"
-  local target_value="$3"
-
-  if grep -q "^${target_key}=" "${file_path}"; then
-    awk -v target_key="${target_key}" -v target_value="${target_value}" '
-      BEGIN { updated = 0 }
-      index($0, target_key "=") == 1 {
-        print target_key "=" target_value
-        updated = 1
-        next
-      }
-      { print }
-      END {
-        if (updated == 0) {
-          print target_key "=" target_value
-        }
-      }
-    ' "${file_path}" > "${file_path}.tmp"
-    mv "${file_path}.tmp" "${file_path}"
-  else
-    printf '%s=%s\n' "${target_key}" "${target_value}" >> "${file_path}"
-  fi
-}
-
-sync_shared_env_from_test_bot_override() {
-  local override_file_path="$1"
-  local shared_env_file="$2"
-  local key=""
-  local value=""
-
-  for key in TELEGRAM_BOT_TOKEN ADMIN_TELEGRAM_ID TRAINER_TELEGRAM_ID; do
-    value="$(read_env_value "${override_file_path}" "${key}" || true)"
-    if [[ -n "${value}" ]]; then
-      echo "[auto-deploy] Syncing ${key} from ${TEST_BOT_OVERRIDE_FILE} into shared .env.server"
-      upsert_env_value "${shared_env_file}" "${key}" "${value}"
-    fi
-  done
-}
-
-find_existing_test_bot_override() {
-  local candidate=""
-
-  if [[ -f "${BOOTSTRAP_ENV_ROOT}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
-    echo "${BOOTSTRAP_ENV_ROOT}/${TEST_BOT_OVERRIDE_FILE}"
-    return 0
-  fi
-
-  if [[ -L "${CURRENT_LINK}" || -d "${CURRENT_LINK}" ]] && [[ -f "${CURRENT_LINK}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
-    echo "${CURRENT_LINK}/${TEST_BOT_OVERRIDE_FILE}"
-    return 0
-  fi
-
-  candidate="$(
-    find "${RELEASES_DIR}" -mindepth 2 -maxdepth 2 -type f -name "${TEST_BOT_OVERRIDE_FILE}" -printf '%T@ %p\n' 2>/dev/null \
-      | sort -nr \
-      | awk 'NR==1 { print $2 }'
-  )"
-
-  if [[ -n "${candidate}" && -f "${candidate}" ]]; then
-    echo "${candidate}"
-    return 0
-  fi
-
-  return 1
-}
 
 retry_curl() {
   local url="$1"
@@ -125,46 +33,12 @@ retry_curl() {
 
 echo "[auto-deploy] DEPLOY_ROOT=${DEPLOY_ROOT}"
 echo "[auto-deploy] RELEASE_NAME=${RELEASE_NAME}"
-echo "[auto-deploy] BOOTSTRAP_ENV_ROOT=${BOOTSTRAP_ENV_ROOT}"
-echo "[auto-deploy] BOOTSTRAP_SECRETS_ROOT=${BOOTSTRAP_SECRETS_ROOT}"
-echo "[auto-deploy] BOOTSTRAP_LOGS_ROOT=${BOOTSTRAP_LOGS_ROOT}"
 
 mkdir -p "${RELEASES_DIR}" "${SHARED_DIR}/.secrets" "${SHARED_DIR}/logs"
-
-if [[ ! -f "${SHARED_DIR}/.env.server" && -f "${BOOTSTRAP_ENV_ROOT}/.env.server" ]]; then
-  echo "[auto-deploy] Bootstrapping shared .env.server from legacy root"
-  cp "${BOOTSTRAP_ENV_ROOT}/.env.server" "${SHARED_DIR}/.env.server"
-  chmod 600 "${SHARED_DIR}/.env.server"
-fi
-
-if [[ ! -f "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
-  EXISTING_TEST_BOT_OVERRIDE="$(find_existing_test_bot_override || true)"
-  if [[ -n "${EXISTING_TEST_BOT_OVERRIDE}" ]]; then
-    echo "[auto-deploy] Bootstrapping shared ${TEST_BOT_OVERRIDE_FILE} from ${EXISTING_TEST_BOT_OVERRIDE}"
-    cp "${EXISTING_TEST_BOT_OVERRIDE}" "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}"
-    chmod 600 "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}"
-  fi
-fi
-
-if [[ ! -f "${SHARED_DIR}/.secrets/google-service-account.json" && -f "${BOOTSTRAP_SECRETS_ROOT}/.secrets/google-service-account.json" ]]; then
-  echo "[auto-deploy] Bootstrapping Google service account JSON from legacy root"
-  cp "${BOOTSTRAP_SECRETS_ROOT}/.secrets/google-service-account.json" "${SHARED_DIR}/.secrets/google-service-account.json"
-  chmod 600 "${SHARED_DIR}/.secrets/google-service-account.json"
-fi
-
-if [[ ! -d "${SHARED_DIR}/logs/api" && -d "${BOOTSTRAP_LOGS_ROOT}/logs" ]]; then
-  echo "[auto-deploy] Bootstrapping shared logs directory from legacy root"
-  mkdir -p "${SHARED_DIR}/logs"
-  cp -a "${BOOTSTRAP_LOGS_ROOT}/logs/." "${SHARED_DIR}/logs/" || true
-fi
 
 if [[ ! -f "${SHARED_DIR}/.env.server" ]]; then
   echo "[auto-deploy] Missing ${SHARED_DIR}/.env.server"
   exit 1
-fi
-
-if [[ -f "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
-  sync_shared_env_from_test_bot_override "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" "${SHARED_DIR}/.env.server"
 fi
 
 if [[ ! -f "${SHARED_DIR}/.secrets/google-service-account.json" ]]; then
@@ -179,31 +53,14 @@ tar -xzf "${RELEASE_ARCHIVE}" -C "${RELEASE_DIR}"
 ln -sfn "${SHARED_DIR}/.env.server" "${RELEASE_DIR}/.env.server"
 ln -sfn "${SHARED_DIR}/.secrets" "${RELEASE_DIR}/.secrets"
 ln -sfn "${SHARED_DIR}/logs" "${RELEASE_DIR}/logs"
-if [[ -f "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" ]]; then
-  ln -sfn "${SHARED_DIR}/${TEST_BOT_OVERRIDE_FILE}" "${RELEASE_DIR}/${TEST_BOT_OVERRIDE_FILE}"
-fi
 
 find "${RELEASE_DIR}/scripts/deploy" -type f -name "*.sh" -exec sed -i 's/\r$//' {} +
 chmod +x "${RELEASE_DIR}/scripts/deploy/deploy-server.sh"
-chmod +x "${RELEASE_DIR}/scripts/deploy/start-dev-test-bot.sh"
-chmod +x "${RELEASE_DIR}/scripts/deploy/stop-dev-test-bot.sh"
 
 ln -sfn "${RELEASE_DIR}" "${CURRENT_LINK}"
 
 cd "${CURRENT_LINK}"
 bash scripts/deploy/deploy-server.sh
-
-if [[ "${RESTART_TEST_BOT}" == "true" ]]; then
-  if [[ -f "${TEST_BOT_OVERRIDE_FILE}" ]]; then
-    echo "[auto-deploy] Restarting Telegram test bot from current release"
-    bash scripts/deploy/start-dev-test-bot.sh
-  elif [[ "${REQUIRE_TEST_BOT_OVERRIDE}" == "true" ]]; then
-    echo "[auto-deploy] Telegram test bot override is required but missing: ${TEST_BOT_OVERRIDE_FILE}"
-    exit 1
-  else
-    echo "[auto-deploy] Skipping Telegram test bot restart: ${TEST_BOT_OVERRIDE_FILE} is not configured"
-  fi
-fi
 
 API_PORT_VALUE="$(grep -E '^API_PORT=' .env.server | head -n 1 | cut -d '=' -f 2- || true)"
 retry_curl "http://127.0.0.1:${API_PORT_VALUE:-3300}/health" "API health"

@@ -1,95 +1,78 @@
-# Согласование времени тренировок Твой Бокс
+# Твой Бокс: бот записи на тренировки
 
-Монорепозиторий Telegram-бота и Telegram mini app для записи на персональные тренировки.
+Production-проект Telegram-бота и Telegram Mini App для записи на персональные тренировки.
 
-Сейчас проект живёт в двух ветках:
+## Production
 
-- `main` — production-ветка для рабочего бота;
-- `dev` — ветка разработки, в которой развивается mini app и все безопасные доработки перед выкладкой.
+- Бот: `@TvoyBox_bot`
+- API: `https://api.tvoybox.ru`
+- Mini App: `https://app.tvoybox.ru`
+- GitHub: `https://github.com/rostpv/TvoiBox_bot`
+- Рабочая ветка для production-деплоя: `main`
+- VPS: `155.212.137.86`
+- Deploy root: `/opt/stack/tvoy-box-bot-deploy`
 
-## Что уже есть в проекте
+Все production-деплои идут из `main` через GitHub Actions.
 
-- `apps/api` — backend API на `NestJS`;
-- `apps/bot` — Telegram-бот на `grammY`;
-- `apps/mini-app` — Telegram mini app на `Next.js`;
-- общие пакеты `packages/*`;
-- серверный деплой, webhook и production autodeploy;
-- локальный `preview`-режим mini app для согласования клиентского и тренерского интерфейса.
+## Что внутри
 
-## Структура
+- `apps/api` - backend API на NestJS.
+- `apps/bot` - Telegram-бот на grammY.
+- `apps/mini-app` - Telegram Mini App на Next.js.
+- `packages/*` - общие типы, конфигурация, логирование и утилиты.
+- `deploy/compose.server.yml` - production Docker Compose.
+- `scripts/deploy/*` - серверные deploy-скрипты.
+- `.github/workflows/deploy-production.yml` - автодеплой production.
+
+## Production deploy
+
+Автодеплой запускается при push в `main`.
+
+GitHub Actions secrets:
+
+- `VPS_HOST`
+- `VPS_PORT`
+- `VPS_USER`
+- `VPS_SSH_PRIVATE_KEY`
+- `VPS_KNOWN_HOSTS`
+
+На VPS должны существовать:
 
 ```text
-apps/
-  api/
-  bot/
-  mini-app/
-packages/
-  shared-types/
-  shared-config/
-  shared-logger/
-  shared-constants/
-  shared-utils/
-infra/
-docs/
-scripts/
-logs/
+/opt/stack/tvoy-box-bot-deploy/shared/.env.server
+/opt/stack/tvoy-box-bot-deploy/shared/.secrets/google-service-account.json
 ```
 
-## Быстрый старт mini app preview
+Проверка после деплоя:
 
-Этот режим нужен для локального согласования интерфейса, когда не хочется зависеть от базы, Telegram и живого backend.
+```bash
+curl https://api.tvoybox.ru/health
+curl https://app.tvoybox.ru/mini-api/health
+curl -I https://app.tvoybox.ru/
+```
 
-1. Установить зависимости:
-   `corepack pnpm install`
-2. Собрать mini app:
-   `corepack pnpm --filter @tvoy-box/mini-app build`
-3. Запустить mini app:
-   `corepack pnpm --filter @tvoy-box/mini-app start`
-4. Открыть нужный режим:
-   - клиент: `http://127.0.0.1:3001/?dev=client`
-   - тренер: `http://127.0.0.1:3001/?dev=trainer`
+## Локальный запуск для разработки
 
-Важно:
+```bash
+corepack pnpm install
+corepack pnpm dev:db:up
+corepack pnpm dev:api
+corepack pnpm dev:mini-app
+```
 
-- `preview`-режим предназначен для интерфейса и сценариев;
-- он не считается полной живой проверкой `bot + api + db + Google Calendar + Telegram`;
-- календарная синхронизация и Telegram-контур проверяются уже на следующем этапе, после внешнего dev-деплоя.
+Для локального запуска нужны локальные `.env`-файлы. Они не хранятся в репозитории.
 
-## Быстрый старт живого локального контура
+## Важные документы
 
-1. Скопировать `.env.example` в `.env`.
-2. Установить зависимости:
-   `corepack pnpm install`
-3. Поднять PostgreSQL:
-   `docker compose up -d postgres`
-4. Запустить API:
-   `corepack pnpm dev:api`
-5. При необходимости запустить mini app в dev-режиме:
-   `corepack pnpm --filter @tvoy-box/mini-app dev`
-6. При необходимости запустить Telegram-бота:
-   `corepack pnpm dev:bot`
+- `docs/production-ops-runbook.md` - эксплуатация production.
+- `docs/owner-production-check.md` - короткий чек-лист проверки владельцем.
 
-## Команды базы данных
+## Секреты
 
-- Проверка схемы: `corepack pnpm --filter @tvoy-box/api prisma:validate`
-- Генерация Prisma Client: `corepack pnpm --filter @tvoy-box/api prisma:generate`
-- Применение схемы в локальную БД: `corepack pnpm --filter @tvoy-box/api prisma:db:push`
-- Создание dev-миграции: `corepack pnpm --filter @tvoy-box/api prisma:migrate:dev`
-- Живая проверка подключения Prisma к локальной БД: `corepack pnpm db:runtime-check`
+Не хранить в GitHub:
 
-## Что важно сейчас
-
-- По умолчанию `BOT_DRY_RUN=true`, поэтому локальный бот не должен конфликтовать с production polling.
-- Локальный `preview` mini app нужен именно для интерфейсного согласования; он не заменяет внешнюю проверку в Telegram.
-- Для живой проверки mini app вместе с backend, календарём и ботом нужен отдельный dev-контур на VPS.
-- Если `corepack pnpm db:runtime-check` сообщает, что `docker` или `psql` не найдены, значит проблема не в коде, а в локальном окружении.
-
-## Где смотреть логи
-
-- API: `logs/api/runtime.jsonl`
-- Bot: `logs/bot/runtime.jsonl`
-- Временные логи локального preview: `runtime-logs/`
-
-## Ближайший следующий шаг
-
-Следующий безопасный практический шаг после локального согласования UI: поднять mini app на внешнем dev-контуре VPS, открыть его уже внутри Telegram и пройти сквозную проверку вместе с ботом и календарём.
+- Telegram bot token
+- `.env` и `.env.server`
+- Google service account JSON
+- SSH private keys
+- пароли и database URL с реальными значениями
