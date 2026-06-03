@@ -12,6 +12,7 @@
 - Deploy root: `/opt/stack/tvoy-box-bot-deploy`
 
 Передача проекта новому владельцу завершена. Итоговый прогресс и зафиксированные аккаунты: `docs/handover-progress.md`.
+Аварийная инструкция поддержки: `docs/emergency-support-runbook.md`.
 
 ## Проверить публичные адреса
 
@@ -39,6 +40,7 @@ docker compose --env-file .env.server -f deploy/compose.server.yml ps
 ## Автодеплой
 
 Deploy запускается через GitHub Actions при push в `main`.
+Изменения только в `docs/**` или корневых `*.md` не запускают production deploy.
 
 Workflow:
 
