@@ -415,17 +415,20 @@ Calendar ID:
   - [x] `LEGACY_ROOT`, если используется
   - [x] `RELEASE_ARCHIVE_NAME`, если нужно сменить имя
   - [x] `PRODUCTION_HEALTHCHECK_URL=https://api.tvoybox.ru/health`
-- [ ] Первый ручной запуск `workflow_dispatch` или тестовый push в `main` выполнен.
-- [ ] Workflow `Deploy Production` завершился успешно.
+- [x] Первый ручной запуск `workflow_dispatch` или тестовый push в `main` выполнен.
+- [x] Workflow `Deploy Production` завершился успешно.
 
 Результат GitHub-проверки:
 
 ```text
 Новый repo URL: https://github.com/rostpv/TvoiBox_bot
 Actions URL:
+https://github.com/rostpv/TvoiBox_bot/actions
 Production workflow run URL:
+https://github.com/rostpv/TvoiBox_bot/actions/runs/26874847145
 Коммит первого успешного деплоя:
-Комментарии: transfer GitHub выполнен, репозиторий виден у нового владельца. GitHub Actions secrets обновлены под VPS 155.212.137.86 по подтверждению пользователя. Deploy SSH key и known_hosts проверены локально. Первый GitHub Actions run после переноса падал из-за BOM в `.env.server`; env перезаписан без BOM, нужен новый зелёный прогон.
+66f3b53e5f75fa0ff31b60e0eaec8a7e1dcef218
+Комментарии: transfer GitHub выполнен, репозиторий виден у нового владельца. GitHub Actions secrets обновлены под VPS 155.212.137.86 по подтверждению пользователя. Deploy SSH key и known_hosts проверены локально. Первый GitHub Actions run после переноса падал из-за BOM в `.env.server`; после перезаписи env без BOM следующий run `26874847145` прошёл успешно.
 ```
 
 ## 7. Подготовить новый VPS
@@ -607,10 +610,10 @@ Caddy настроен на новом VPS 2026-06-03. После обновле
 - [x] GitHub Actions secrets заполнены.
 - [x] На VPS есть `shared/.env.server`.
 - [x] На VPS есть `shared/.secrets/google-service-account.json`.
-- [ ] Запущен `Deploy Production` через GitHub Actions.
-- [ ] Шаг `Upload release bundle` прошёл.
-- [ ] Шаг `Run remote deploy` прошёл.
-- [ ] Шаг `Verify public health endpoint` прошёл.
+- [x] Запущен `Deploy Production` через GitHub Actions.
+- [x] Шаг `Upload release bundle` прошёл.
+- [x] Шаг `Run remote deploy` прошёл.
+- [x] Шаг `Verify public health endpoint` прошёл.
 - [x] На VPS проверены контейнеры:
 
 ```bash
@@ -648,9 +651,9 @@ curl https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 Дата:
 2026-06-03
 GitHub Actions run:
-первый run после переноса был неуспешен из-за BOM в `.env.server`; новый успешный run ещё нужен
+https://github.com/rostpv/TvoiBox_bot/actions/runs/26874847145
 Release SHA:
-da40a866a2a01aeeb0e99dfac96934c5eb0ad8a5
+66f3b53e5f75fa0ff31b60e0eaec8a7e1dcef218
 API health:
 `https://api.tvoybox.ru/health` -> 200
 Mini app health:
@@ -658,7 +661,7 @@ Mini app health:
 Webhook URL:
 домен `api.tvoybox.ru`, секретный путь не записываем
 Комментарии:
-Ручной deploy на VPS прошёл успешно, контейнеры подняты и публичные проверки прошли. Осталось получить зелёный GitHub Actions deploy run.
+Ручной deploy на VPS прошёл успешно, затем GitHub Actions deploy run `26874847145` тоже прошёл успешно. Текущий release на сервере: `/opt/stack/tvoy-box-bot-deploy/releases/66f3b53e5f75fa0ff31b60e0eaec8a7e1dcef218`.
 ```
 
 ## 11. Проверить продукт глазами пользователя
