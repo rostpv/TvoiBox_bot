@@ -401,16 +401,16 @@ Calendar ID:
 - [x] Выбран production branch: `main`
 - [x] Код перенесён в новый репозиторий.
 - [x] Локальный `origin` обновлён: `https://github.com/rostpv/TvoiBox_bot.git`
-- [ ] Проверено, что в репозиторий не попали `.env`, `.env.server`, `.secrets`, приватные ключи и service account JSON.
-- [ ] Проверено, что `.gitignore` закрывает локальные секреты.
-- [ ] В новом репозитории включены GitHub Actions.
-- [ ] В `Settings -> Secrets and variables -> Actions` добавлены secrets:
+- [x] Проверено, что в репозиторий не попали `.env`, `.env.server`, `.secrets`, приватные ключи и service account JSON.
+- [x] Проверено, что `.gitignore` закрывает локальные секреты.
+- [x] В новом репозитории включены GitHub Actions.
+- [x] В `Settings -> Secrets and variables -> Actions` добавлены secrets:
   - [x] `VPS_HOST`
   - [x] `VPS_PORT`
   - [x] `VPS_USER`
   - [x] `VPS_SSH_PRIVATE_KEY`
   - [x] `VPS_KNOWN_HOSTS`
-- [ ] В `.github/workflows/deploy-production.yml` обновлены hardcoded значения под новый контур:
+- [x] В `.github/workflows/deploy-production.yml` обновлены hardcoded значения под новый контур:
   - [x] `DEPLOY_ROOT`
   - [x] `LEGACY_ROOT`, если используется
   - [x] `RELEASE_ARCHIVE_NAME`, если нужно сменить имя
@@ -425,7 +425,7 @@ Calendar ID:
 Actions URL:
 Production workflow run URL:
 Коммит первого успешного деплоя:
-Комментарии: transfer GitHub выполнен, репозиторий виден у нового владельца. GitHub Actions secrets обновлены под VPS 155.212.137.86 по подтверждению пользователя. Deploy SSH key и known_hosts проверены локально.
+Комментарии: transfer GitHub выполнен, репозиторий виден у нового владельца. GitHub Actions secrets обновлены под VPS 155.212.137.86 по подтверждению пользователя. Deploy SSH key и known_hosts проверены локально. Первый GitHub Actions run после переноса падал из-за BOM в `.env.server`; env перезаписан без BOM, нужен новый зелёный прогон.
 ```
 
 ## 7. Подготовить новый VPS
@@ -468,12 +468,19 @@ bash scripts/deploy/setup-server-autodeploy.sh
 
 ```text
 Provider:
+beget
 Server IP:
+155.212.137.86
 SSH user:
+root для первичной настройки, deploy для автодеплоя
 Deploy root:
+/opt/stack/tvoy-box-bot-deploy
 Docker version:
+установлен Docker и Docker Compose plugin
 Caddy version:
+v2.11.4
 Комментарии:
+Caddy обновлён с Ubuntu-пакета 2.6.2 до официального stable 2.11.4, потому что 2.6.2 падал при выпуске сертификата для второго домена.
 ```
 
 ## 8. Настроить DNS и Caddy
@@ -515,6 +522,13 @@ systemctl reload caddy
 systemctl is-active caddy
 ```
 
+- [x] Caddy обновлён до `v2.11.4`.
+- [x] HTTPS-сертификат выпущен для `api.tvoybox.ru`.
+- [x] HTTPS-сертификат выпущен для `app.tvoybox.ru`.
+- [x] Публичный API health отвечает `200`.
+- [x] Публичный mini app root отвечает `200`.
+- [x] Публичный mini app API proxy отвечает `200`.
+
 Результат DNS/Caddy-проверки:
 
 ```text
@@ -529,7 +543,7 @@ Valid configuration
 Caddy reload:
 active
 Комментарии:
-Caddy настроен на новом VPS 2026-06-03.
+Caddy настроен на новом VPS 2026-06-03. После обновления Caddy до v2.11.4 оба домена получили Let's Encrypt сертификаты и публичные проверки прошли.
 ```
 
 ## 9. Собрать новый `.env.server`
@@ -578,47 +592,51 @@ Caddy настроен на новом VPS 2026-06-03.
 
 ```text
 Файл создан:
+да, локально и на VPS
 Права файла:
+`600` на VPS
 Секреты сверены:
+да, обязательные значения заполнены, `.env.server` перезаписан UTF-8 без BOM
 Комментарии:
+На VPS файл лежит в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`; Google JSON лежит в `shared/.secrets/google-service-account.json`.
 ```
 
 ## 10. Первый production deploy
 
-- [ ] Новый код находится в ветке `main`.
-- [ ] GitHub Actions secrets заполнены.
-- [ ] На VPS есть `shared/.env.server`.
-- [ ] На VPS есть `shared/.secrets/google-service-account.json`.
+- [x] Новый код находится в ветке `main`.
+- [x] GitHub Actions secrets заполнены.
+- [x] На VPS есть `shared/.env.server`.
+- [x] На VPS есть `shared/.secrets/google-service-account.json`.
 - [ ] Запущен `Deploy Production` через GitHub Actions.
 - [ ] Шаг `Upload release bundle` прошёл.
 - [ ] Шаг `Run remote deploy` прошёл.
 - [ ] Шаг `Verify public health endpoint` прошёл.
-- [ ] На VPS проверены контейнеры:
+- [x] На VPS проверены контейнеры:
 
 ```bash
 cd /opt/stack/tvoy-box-bot-deploy/current
 docker compose --env-file .env.server -f deploy/compose.server.yml ps
 ```
 
-- [ ] API health отвечает:
+- [x] API health отвечает:
 
 ```bash
 curl https://<api-domain>/health
 ```
 
-- [ ] Mini app root отвечает:
+- [x] Mini app root отвечает:
 
 ```bash
 curl -I https://<app-domain>/
 ```
 
-- [ ] Mini app API proxy отвечает:
+- [x] Mini app API proxy отвечает:
 
 ```bash
 curl https://<app-domain>/mini-api/health
 ```
 
-- [ ] Telegram webhook проверен:
+- [x] Telegram webhook проверен:
 
 ```bash
 curl https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
@@ -628,12 +646,19 @@ curl https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/getWebhookInfo
 
 ```text
 Дата:
+2026-06-03
 GitHub Actions run:
+первый run после переноса был неуспешен из-за BOM в `.env.server`; новый успешный run ещё нужен
 Release SHA:
+da40a866a2a01aeeb0e99dfac96934c5eb0ad8a5
 API health:
+`https://api.tvoybox.ru/health` -> 200
 Mini app health:
+`https://app.tvoybox.ru/` -> 200; `https://app.tvoybox.ru/mini-api/health` -> 200
 Webhook URL:
+домен `api.tvoybox.ru`, секретный путь не записываем
 Комментарии:
+Ручной deploy на VPS прошёл успешно, контейнеры подняты и публичные проверки прошли. Осталось получить зелёный GitHub Actions deploy run.
 ```
 
 ## 11. Проверить продукт глазами пользователя
