@@ -10,6 +10,7 @@
 - VPS: `155.212.137.86`
 - Deploy user: `deploy`
 - Deploy root: `/opt/stack/tvoy-box-bot-deploy`
+- Postgres backups: `/opt/stack/tvoy-box-bot-deploy/shared/backups/postgres`, daily `03:15`, retention `14` days.
 
 Передача проекта новому владельцу завершена. Итоговый прогресс и зафиксированные аккаунты: `docs/handover-progress.md`.
 Аварийная инструкция поддержки: `docs/emergency-support-runbook.md`.

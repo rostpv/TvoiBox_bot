@@ -18,6 +18,9 @@
 - Current release symlink: `/opt/stack/tvoy-box-bot-deploy/current`
 - Shared env: `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`
 - Google service account JSON: `/opt/stack/tvoy-box-bot-deploy/shared/.secrets/google-service-account.json`
+- Local Postgres backups: `/opt/stack/tvoy-box-bot-deploy/shared/backups/postgres`
+- Backup script: `/usr/local/sbin/tvoy-box-postgres-backup.sh`
+- Backup cron: `/etc/cron.d/tvoy-box-postgres-backup`
 - API: `https://api.tvoybox.ru`
 - Mini app: `https://app.tvoybox.ru`
 - Healthcheck: `https://api.tvoybox.ru/health`
@@ -131,6 +134,57 @@ docker system prune --volumes
 ```
 
 Эта команда может удалить volume с базой данных.
+
+### Бэкапы базы
+
+На VPS настроен ежедневный локальный backup PostgreSQL.
+
+- Расписание: каждый день в `03:15` по времени сервера.
+- Хранение: последние `14` дней.
+- Папка backup-файлов: `/opt/stack/tvoy-box-bot-deploy/shared/backups/postgres`.
+- Скрипт: `/usr/local/sbin/tvoy-box-postgres-backup.sh`.
+- Cron: `/etc/cron.d/tvoy-box-postgres-backup`.
+
+Создать backup вручную:
+
+```bash
+/usr/local/sbin/tvoy-box-postgres-backup.sh
+```
+
+Посмотреть backup-файлы:
+
+```bash
+ls -lh /opt/stack/tvoy-box-bot-deploy/shared/backups/postgres
+```
+
+Проверить последний backup:
+
+```bash
+latest=$(ls -1t /opt/stack/tvoy-box-bot-deploy/shared/backups/postgres/tvoy-box-postgres-*.sql.gz | head -n 1)
+gzip -t "$latest"
+zcat "$latest" | sed -n '1,12p'
+```
+
+Посмотреть лог cron backup:
+
+```bash
+tail -100 /var/log/tvoy-box-postgres-backup.log
+```
+
+Восстановление из backup делать только после отдельного решения, потому что оно меняет состояние базы.
+
+Общий порядок:
+
+```bash
+cd /opt/stack/tvoy-box-bot-deploy/current
+docker compose --env-file .env.server -f deploy/compose.server.yml stop api bot mini-app
+latest=$(ls -1t /opt/stack/tvoy-box-bot-deploy/shared/backups/postgres/tvoy-box-postgres-*.sql.gz | head -n 1)
+zcat "$latest" | docker exec -i tvoy-box-bot-postgres-1 sh -lc 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"'
+docker compose --env-file .env.server -f deploy/compose.server.yml up -d
+curl -fsSL https://api.tvoybox.ru/health
+```
+
+Для полного восстановления на чистую базу может потребоваться предварительно очистить схему. Это действие не выполнять без проверки конкретной аварии.
 
 ### Проверить логи
 
@@ -283,4 +337,3 @@ curl -fsSL https://api.tvoybox.ru/health
 - [ ] Есть ли доступ к Beget.
 - [ ] Есть ли доступ к GitHub `rostpv/TvoiBox_bot`.
 - [ ] Добавлен ли временный SSH-ключ Codex в `/root/.ssh/authorized_keys`.
-
