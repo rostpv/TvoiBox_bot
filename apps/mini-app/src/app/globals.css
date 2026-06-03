@@ -1779,6 +1779,10 @@ a {
   line-height: 1.32;
 }
 
+.trainer-settings-panel .form-grid + .form-grid {
+  margin-top: 18px;
+}
+
 .trainer-settings-panel .field-label,
 .trainer-slots-panel .field-label {
   font-size: 10px;
