@@ -24,7 +24,7 @@ jobs:
       RELEASE_NAME: ${{ github.sha }}
       RELEASE_ARCHIVE_NAME: tvoy-box-bot-${{ github.sha }}.tar.gz
       KEEP_RELEASES: "5"
-      PRODUCTION_HEALTHCHECK_URL: https://api.anyatobolova.ru/health
+      PRODUCTION_HEALTHCHECK_URL: https://api.tvoybox.ru/health
 
     steps:
       - name: Checkout repository

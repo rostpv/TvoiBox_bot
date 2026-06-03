@@ -21,3 +21,4 @@ runtime-logs/
 apps/**/dist/
 packages/**/dist/
 pnpm-lock.yaml
+Твой Бокс production secrets/
