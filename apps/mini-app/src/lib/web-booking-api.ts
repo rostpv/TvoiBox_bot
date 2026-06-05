@@ -20,7 +20,28 @@ export interface WebAvailableSlot {
   status: "OPEN" | "HELD" | "BOOKED" | "CLOSED" | "CANCELLED";
 }
 
+export interface WebSlotClosureInfo {
+  hasClosure: boolean;
+  reason: string | null;
+  closedFrom: string | null;
+  closedUntil: string | null;
+  closedSlotsCount: number;
+}
+
+export interface WebTrainerSettings {
+  bookingHorizonDays: number;
+  sameDayBookingCutoff: number;
+  workingDays: string[];
+  workdayStartHour: number;
+  workdayEndHour: number;
+  trainingDurationMinutes: number;
+  workdayStartMinute: number;
+  workdayEndMinute: number;
+  updatedAt: string;
+}
+
 export type WebBookingStatus = "PENDING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "CANCELLED" | "RESCHEDULED";
+export type WebNoSlotRequestStatus = "NEW" | "REVIEWED" | "ARCHIVED";
 
 export interface WebClientTraining {
   bookingId: string;
@@ -36,6 +57,17 @@ export interface WebClientTraining {
   canCancel: boolean;
   canReschedule: boolean;
   canDelete: boolean;
+}
+
+export interface WebNoSlotRequest {
+  id: string;
+  status: WebNoSlotRequestStatus;
+  preferredDays: string[];
+  preferredTime: string | null;
+  clientComment: string | null;
+  trainerComment: string | null;
+  createdAt: string;
+  client: WebClientProfile;
 }
 
 interface SessionResponse {
@@ -64,6 +96,21 @@ interface CreateBookingResponse {
     startAt: string;
     endAt: string;
   };
+}
+
+interface CreateNoSlotRequestResponse {
+  status: "created";
+  request: WebNoSlotRequest;
+}
+
+interface NoSlotRequestsResponse {
+  status: "ok";
+  items: WebNoSlotRequest[];
+}
+
+interface TrainerSettingsResponse {
+  status: "ok" | "updated";
+  settings: WebTrainerSettings;
 }
 
 interface BookingActionResponse {
@@ -117,6 +164,14 @@ export class WebBookingApi {
     return this.authRequest<WebAvailableSlot[]>("/web/client/slots", { method: "GET" });
   }
 
+  async getClosureInfo(): Promise<WebSlotClosureInfo> {
+    return this.authRequest<WebSlotClosureInfo>("/web/client/closure-info", { method: "GET" });
+  }
+
+  async getBookingRules(): Promise<TrainerSettingsResponse> {
+    return this.authRequest<TrainerSettingsResponse>("/web/client/booking-rules", { method: "GET" });
+  }
+
   async requestBooking(payload: {
     slotId: string;
     clientComment?: string | null;
@@ -157,6 +212,28 @@ export class WebBookingApi {
 
   async archiveClientTraining(payload: { bookingId: string }): Promise<BookingActionResponse> {
     return this.authRequest<BookingActionResponse>("/web/client/trainings/archive", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async createNoSlotRequest(payload: {
+    preferredDays: string[];
+    preferredTime?: string | null;
+    clientComment?: string | null;
+  }): Promise<CreateNoSlotRequestResponse> {
+    return this.authRequest<CreateNoSlotRequestResponse>("/web/client/no-slot-requests", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getNoSlotRequests(): Promise<NoSlotRequestsResponse> {
+    return this.authRequest<NoSlotRequestsResponse>("/web/client/no-slot-requests", { method: "GET" });
+  }
+
+  async archiveNoSlotRequest(payload: { requestId: string }): Promise<{ status: "updated"; request: WebNoSlotRequest }> {
+    return this.authRequest<{ status: "updated"; request: WebNoSlotRequest }>("/web/client/no-slot-requests/archive", {
       method: "POST",
       body: JSON.stringify(payload),
     });

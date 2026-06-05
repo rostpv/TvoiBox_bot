@@ -7,7 +7,9 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { BookingsService } from "../bookings/bookings.service";
 import { ClientsService, ClientDto } from "../clients/clients.service";
 import { MiniAppAuthService } from "../mini-app/mini-app-auth.service";
+import { NoSlotRequestsService } from "../no-slot-requests/no-slot-requests.service";
 import { SlotsService } from "../slots/slots.service";
+import { TrainerSettingsService } from "../trainer-settings/trainer-settings.service";
 
 const WEB_SESSION_TTL_DAYS = 180;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -26,6 +28,8 @@ export class WebBookingService {
     private readonly miniAppAuthService: MiniAppAuthService,
     private readonly slotsService: SlotsService,
     private readonly bookingsService: BookingsService,
+    private readonly noSlotRequestsService: NoSlotRequestsService,
+    private readonly trainerSettingsService: TrainerSettingsService,
   ) {}
 
   async createClientSession(input: {
@@ -81,6 +85,20 @@ export class WebBookingService {
     return this.slotsService.getAvailableSlotsForClient({
       clientId: session.clientId,
     });
+  }
+
+  async getClientClosureInfo(token: string) {
+    const session = await this.getSessionByToken(token);
+    return this.slotsService.getClientClosureInfo({
+      telegramId: session.client.telegramId,
+    });
+  }
+
+  async getClientBookingRules() {
+    return {
+      status: "ok",
+      settings: await this.trainerSettingsService.getPublicSettings(),
+    };
   }
 
   async requestBooking(token: string, input: {
@@ -142,6 +160,37 @@ export class WebBookingService {
     return this.bookingsService.archiveTrainingByClient({
       telegramId: session.client.telegramId,
       bookingId: input.bookingId,
+    });
+  }
+
+  async createNoSlotRequest(token: string, input: {
+    preferredDays: string[];
+    preferredTime?: string | null;
+    clientComment?: string | null;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.noSlotRequestsService.createRequest({
+      telegramId: session.client.telegramId,
+      preferredDays: input.preferredDays,
+      preferredTime: input.preferredTime,
+      clientComment: input.clientComment,
+    });
+  }
+
+  async getClientNoSlotRequests(token: string) {
+    const session = await this.getSessionByToken(token);
+    return this.noSlotRequestsService.listForClient({
+      telegramId: session.client.telegramId,
+    });
+  }
+
+  async archiveClientNoSlotRequest(token: string, input: {
+    requestId: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.noSlotRequestsService.archiveByClient({
+      telegramId: session.client.telegramId,
+      requestId: input.requestId,
     });
   }
 

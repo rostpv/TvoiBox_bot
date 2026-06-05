@@ -8,6 +8,10 @@ import {
   WebBookingApi,
   WebClientProfile,
   WebClientTraining,
+  WebNoSlotRequest,
+  WebNoSlotRequestStatus,
+  WebSlotClosureInfo,
+  WebTrainerSettings,
 } from "../lib/web-booking-api";
 import { openExternalUrl } from "../lib/telegram-link";
 
@@ -17,12 +21,65 @@ interface ClientFormState {
   email: string;
 }
 
+interface NoSlotRequestFormState {
+  preferredDays: string[];
+  preferredTime: string;
+  clientComment: string;
+}
+
 type MessageTone = "success" | "error" | "info";
-type WebScreenId = "home" | "booking" | "records" | "profile";
+type WebScreenId = "home" | "booking" | "records" | "profile" | "support";
 type RecordsViewMode = "active" | "archive";
 
 const SESSION_STORAGE_KEY = "tvoy-box-web-client-token";
 const SUPPORT_TELEGRAM_URL = "https://t.me/RostPV";
+const WEEKDAY_LABELS_RU: Record<string, string> = {
+  monday: "Понедельник",
+  tuesday: "Вторник",
+  wednesday: "Среда",
+  thursday: "Четверг",
+  friday: "Пятница",
+  saturday: "Суббота",
+  sunday: "Воскресенье",
+};
+
+function formatHoursLabel(value: number): string {
+  const abs = Math.abs(value) % 100;
+  const last = abs % 10;
+
+  if (abs > 10 && abs < 20) {
+    return `${value} часов`;
+  }
+
+  if (last === 1) {
+    return `${value} час`;
+  }
+
+  if (last >= 2 && last <= 4) {
+    return `${value} часа`;
+  }
+
+  return `${value} часов`;
+}
+
+function formatDaysLabel(value: number): string {
+  const abs = Math.abs(value) % 100;
+  const last = abs % 10;
+
+  if (abs > 10 && abs < 20) {
+    return `${value} дней`;
+  }
+
+  if (last === 1) {
+    return `${value} день`;
+  }
+
+  if (last >= 2 && last <= 4) {
+    return `${value} дня`;
+  }
+
+  return `${value} дней`;
+}
 
 function formatDayLabel(dateIso: string): string {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -80,6 +137,42 @@ function sortClientRecords(items: WebClientTraining[], view: RecordsViewMode): W
   return [...items].sort((left, right) => view === "archive"
     ? right.startAt.localeCompare(left.startAt)
     : left.startAt.localeCompare(right.startAt));
+}
+
+function getNoSlotStatusLabel(status: WebNoSlotRequestStatus): string {
+  switch (status) {
+    case "NEW":
+      return "Отправлен";
+    case "REVIEWED":
+      return "В работе";
+    case "ARCHIVED":
+      return "Закрыт";
+  }
+}
+
+function RefreshIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M21 12a9 9 0 1 1-2.64-6.36"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2.4"
+      />
+      <path d="M21 3v6h-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" />
+    </svg>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="5" width="16" height="15" rx="3" fill="none" stroke="currentColor" strokeWidth="2.8" />
+      <path d="M8 3v4M16 3v4M4 10h16" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth="2.8" />
+    </svg>
+  );
 }
 
 function getStatusLabel(item: WebClientTraining): string {
@@ -144,11 +237,20 @@ export function WebBookingPage() {
   });
   const [slots, setSlots] = useState<WebAvailableSlot[]>([]);
   const [records, setRecords] = useState<WebClientTraining[]>([]);
+  const [closureInfo, setClosureInfo] = useState<WebSlotClosureInfo | null>(null);
+  const [bookingRules, setBookingRules] = useState<WebTrainerSettings | null>(null);
+  const [noSlotRequests, setNoSlotRequests] = useState<WebNoSlotRequest[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [comment, setComment] = useState("");
   const [consentAccepted, setConsentAccepted] = useState(false);
   const [recordsView, setRecordsView] = useState<RecordsViewMode>("active");
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null);
+  const [showNoSlotRequest, setShowNoSlotRequest] = useState(false);
+  const [noSlotForm, setNoSlotForm] = useState<NoSlotRequestFormState>({
+    preferredDays: [],
+    preferredTime: "",
+    clientComment: "",
+  });
   const [screen, setScreen] = useState<WebScreenId>("home");
   const [isBusy, setIsBusy] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -191,11 +293,17 @@ export function WebBookingPage() {
   };
 
   const loadBookingContext = async (view = recordsView) => {
-    const [nextSlots, nextRecords] = await Promise.all([
+    const [nextSlots, nextClosureInfo, nextRules, nextNoSlotRequests, nextRecords] = await Promise.all([
       api.getSlots(),
+      api.getClosureInfo(),
+      api.getBookingRules(),
+      api.getNoSlotRequests(),
       api.getTrainings({ includeArchived: view === "archive" }),
     ]);
     setSlots(nextSlots);
+    setClosureInfo(nextClosureInfo);
+    setBookingRules(nextRules.settings);
+    setNoSlotRequests(nextNoSlotRequests.items);
     setRecords(sortClientRecords(nextRecords.items, view));
   };
 
@@ -406,17 +514,69 @@ export function WebBookingPage() {
     openExternalUrl(SUPPORT_TELEGRAM_URL);
   };
 
+  const handleNoSlotRequest = async () => {
+    if (noSlotForm.preferredDays.length === 0) {
+      setMessage({ tone: "error", text: "Выберите хотя бы один удобный день." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.createNoSlotRequest({
+        preferredDays: noSlotForm.preferredDays,
+        preferredTime: noSlotForm.preferredTime || null,
+        clientComment: noSlotForm.clientComment || null,
+      });
+      setShowNoSlotRequest(false);
+      setNoSlotForm({
+        preferredDays: [],
+        preferredTime: "",
+        clientComment: "",
+      });
+      const response = await api.getNoSlotRequests();
+      setNoSlotRequests(response.items);
+      setMessage({ tone: "success", text: "Запрос без слота отправлен. Тренер увидит ваши пожелания." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось отправить запрос без слота." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleArchiveNoSlotRequest = async (requestId: string) => {
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.archiveNoSlotRequest({ requestId });
+      const response = await api.getNoSlotRequests();
+      setNoSlotRequests(response.items);
+      setMessage({ tone: "success", text: "Запрос удалён из списка." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось удалить запрос." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleLogout = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     api.setToken(null);
     setProfile(null);
     setSlots([]);
     setRecords([]);
+    setNoSlotRequests([]);
     setSelectedSlotId("");
     setComment("");
     setConsentAccepted(false);
     setRecordsView("active");
     setRescheduleBookingId(null);
+    setShowNoSlotRequest(false);
+    setNoSlotForm({ preferredDays: [], preferredTime: "", clientComment: "" });
     setClientForm({ fullName: "", phone: "", email: "" });
     setScreen("home");
     setMessage({ tone: "info", text: "Данные на этом устройстве очищены." });
@@ -457,6 +617,16 @@ export function WebBookingPage() {
                 onClick={() => openScreen("profile")}
               >
                 П
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Помощь"
+                title="Помощь"
+                data-tooltip="Помощь"
+                disabled={isSubmitting}
+                onClick={() => openScreen("support")}
+              >
+                ?
               </button>
               <button className="ghost-button" disabled={isSubmitting} onClick={handleLogout}>
                 Выйти
@@ -610,16 +780,53 @@ export function WebBookingPage() {
                     ? "Выберите новое удобное время, и тренер получит запрос на перенос."
                     : "Выберите удобный день и время для занятия."}
                 </p>
+                {bookingRules ? (
+                  <p className="booking-rules-note">
+                    Запись открыта на {formatDaysLabel(bookingRules.bookingHorizonDays)} вперёд.
+                    {bookingRules.sameDayBookingCutoff > 0
+                      ? ` В день тренировки запись закрывается за ${formatHoursLabel(bookingRules.sameDayBookingCutoff)} до начала.`
+                      : " В день тренировки запись доступна до начала занятия."}
+                  </p>
+                ) : null}
               </div>
-              <button className="secondary-button secondary-button-compact" disabled={isSubmitting} onClick={() => void loadBookingContext()}>
-                Обновить
+              <button
+                className="secondary-button secondary-button-compact action-btn--icon-tight"
+                aria-label="Обновить слоты"
+                title="Обновить"
+                disabled={isSubmitting}
+                onClick={() => void loadBookingContext()}
+              >
+                <RefreshIcon />
               </button>
             </div>
+
+            <label className="checkbox-row checkbox-row-soft">
+              <input
+                type="checkbox"
+                checked={consentAccepted}
+                disabled={isSubmitting}
+                onChange={(event) => setConsentAccepted(event.target.checked)}
+              />
+              <span>Согласие на обработку персональных данных</span>
+            </label>
+            {!consentAccepted ? <p className="consent-note">После подтверждения согласия можно выбрать дату и время тренировки.</p> : null}
+
+            {closureInfo?.hasClosure ? (
+              <div className="alert alert-info">
+                <div>
+                  <strong>Часть слотов сейчас закрыта</strong>
+                  <p>{closureInfo.reason || "Тренер временно закрыл часть времени для записи."}</p>
+                </div>
+              </div>
+            ) : null}
 
             {slotGroups.length === 0 ? (
               <div className="empty-state">
                 <strong>Свободных слотов пока нет</strong>
-                <span>Попробуйте обновить список позже или свяжитесь с тренером вручную.</span>
+                <span>Можно сразу отправить запрос без слота и указать удобные дни.</span>
+                <button className="secondary-button secondary-button-compact" onClick={() => setShowNoSlotRequest(true)}>
+                  Открыть запрос без слота
+                </button>
               </div>
             ) : (
               <div className="booking-groups">
@@ -634,6 +841,7 @@ export function WebBookingPage() {
                           className="time-button"
                           data-active={selectedSlotId === slot.id}
                           key={slot.id}
+                          disabled={!consentAccepted}
                           onClick={() => setSelectedSlotId(slot.id)}
                         >
                           {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
@@ -654,8 +862,145 @@ export function WebBookingPage() {
                   placeholder="например: удобнее после 18:00"
                 />
               </label>
-              <button className="primary-button booking-submit-button" disabled={isSubmitting || !selectedSlotId} onClick={() => void handleRequestBooking()}>
-                {rescheduleBookingId ? "Отправить запрос на перенос" : "Записаться"}
+              <div className="booking-actions">
+                <button className="primary-button booking-submit-button" disabled={isSubmitting || !selectedSlotId || !consentAccepted} onClick={() => void handleRequestBooking()}>
+                  {rescheduleBookingId ? "Отправить запрос на перенос" : "Записаться"}
+                </button>
+                <button
+                  className="secondary-button secondary-button-compact"
+                  disabled={isSubmitting}
+                  onClick={() => setShowNoSlotRequest((current) => !current)}
+                >
+                  {showNoSlotRequest ? "Скрыть запрос" : "Нет подходящего времени"}
+                </button>
+              </div>
+            </div>
+
+            {showNoSlotRequest ? (
+              <section className="panel no-slot-panel">
+                <div className="no-slot-header">
+                  <h3 className="panel-title">Запрос без слота</h3>
+                  <p className="panel-text">
+                    Не нашли подходящее время? Укажите удобные дни и диапазон времени, а тренер поможет подобрать вариант.
+                  </p>
+                </div>
+
+                <div className="no-slot-step">
+                  <span className="step-label">Шаг 1</span>
+                  <h4 className="step-title">Удобные дни</h4>
+                  <div className="chip-group chip-group-soft">
+                    {Object.entries(WEEKDAY_LABELS_RU).map(([value, label]) => {
+                      const active = noSlotForm.preferredDays.includes(value);
+                      return (
+                        <button
+                          key={value}
+                          className="chip-button chip-button-soft"
+                          data-active={active}
+                          onClick={() =>
+                            setNoSlotForm((current) => ({
+                              ...current,
+                              preferredDays: active
+                                ? current.preferredDays.filter((item) => item !== value)
+                                : [...current.preferredDays, value],
+                            }))
+                          }
+                          type="button"
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="no-slot-step">
+                  <span className="step-label">Шаг 2</span>
+                  <h4 className="step-title">Предпочтительное время</h4>
+                  <label className="field">
+                    <input
+                      value={noSlotForm.preferredTime}
+                      onChange={(event) => setNoSlotForm((current) => ({ ...current, preferredTime: event.target.value }))}
+                      placeholder="например: после 19:00 или утром"
+                    />
+                  </label>
+                </div>
+
+                <div className="no-slot-step">
+                  <span className="step-label">Шаг 3</span>
+                  <h4 className="step-title">Комментарий (необязательно)</h4>
+                  <label className="field">
+                    <textarea
+                      value={noSlotForm.clientComment}
+                      onChange={(event) => setNoSlotForm((current) => ({ ...current, clientComment: event.target.value }))}
+                      placeholder="дополнительные пожелания"
+                    />
+                  </label>
+                </div>
+
+                <button className="primary-button no-slot-submit-button" disabled={isSubmitting} onClick={() => void handleNoSlotRequest()}>
+                  Отправить запрос
+                </button>
+              </section>
+            ) : null}
+
+            {noSlotRequests.length > 0 ? (
+              <section className="panel no-slot-panel">
+                <div className="no-slot-header">
+                  <h3 className="panel-title">Запросы без слота</h3>
+                  <p className="panel-text">Здесь появится ответ тренера, если он оставит комментарий к вашему запросу.</p>
+                </div>
+
+                <div className="record-list">
+                  {noSlotRequests.slice(0, 5).map((item) => (
+                    <article className="record-card" key={item.id}>
+                      <div className="record-card-head">
+                        <div>
+                          <h4 className="record-title">Удобные дни: {item.preferredDays.map((day) => WEEKDAY_LABELS_RU[day] ?? day).join(", ")}</h4>
+                          <p className="record-meta">{item.preferredTime ? `Время: ${item.preferredTime}` : `Создан: ${formatDateTime(item.createdAt)}`}</p>
+                        </div>
+                        <span className="status-pill" data-tone={item.status === "NEW" ? "pending" : item.status === "ARCHIVED" ? "muted" : "success"}>
+                          {getNoSlotStatusLabel(item.status)}
+                        </span>
+                      </div>
+                      {item.clientComment ? <p className="record-comment">Ваш комментарий: {item.clientComment}</p> : null}
+                      {item.trainerComment ? <p className="record-comment">Комментарий тренера: {item.trainerComment}</p> : null}
+                      <div className="record-actions">
+                        <button className="secondary-button" disabled={isSubmitting} onClick={() => void handleArchiveNoSlotRequest(item.id)}>
+                          Удалить запрос
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </section>
+        ) : null}
+
+        {!isBusy && profile && screen === "support" ? (
+          <section className="panel web-booking-panel">
+            <div className="panel-header panel-header-compact panel-header-slim panel-header-top-actions">
+              <div className="panel-header-row">
+                <button className="back-link back-link-inline" disabled={isSubmitting} onClick={() => openScreen("home")}>
+                  ← Назад
+                </button>
+              </div>
+              <div className="panel-header-copy panel-header-copy-wide">
+                <h2 className="panel-title">Помощь</h2>
+                <p className="panel-text">Коротко о записи и связи с тренером.</p>
+              </div>
+            </div>
+
+            <ul className="support-list">
+              <li>Если подходящего времени нет, отправьте запрос без слота с удобными днями и диапазоном времени.</li>
+              <li>Все актуальные статусы по заявкам и тренировкам собраны в разделе «Мои тренировки».</li>
+              <li>Чтобы тренеру было проще связаться, лучше заранее заполнить имя, телефон и email в профиле.</li>
+            </ul>
+
+            <div className="support-contact">
+              <p className="panel-text">Если есть вопрос или хочется что-то обсудить, просто напишите тренеру в Telegram.</p>
+              <button className="secondary-button support-link-button" type="button" onClick={handleContactTrainer}>
+                Написать тренеру
               </button>
             </div>
           </section>
@@ -740,13 +1085,13 @@ export function WebBookingPage() {
                     Архив
                   </button>
                   <button
-                    className="secondary-button secondary-button-compact header-action-button"
+                    className="secondary-button secondary-button-compact header-action-button action-btn--icon-tight"
                     aria-label="Обновить записи"
                     title="Обновить"
                     disabled={isSubmitting}
                     onClick={() => void loadRecords(recordsView)}
                   >
-                    Обновить
+                    <RefreshIcon />
                   </button>
                 </div>
               </div>
@@ -804,8 +1149,13 @@ export function WebBookingPage() {
                       {primaryComment ? <p className="workout-card__comment">{primaryComment}</p> : null}
                       {item.bookingStatus === "CONFIRMED" && item.trainingStatus !== "CANCELLED" && !item.isAwaitingTrainerDecision ? (
                         <div className="workout-card__actions">
-                          <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
-                            Добавить в календарь
+                          <a
+                            className="status-button action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                            href={api.getCalendarFileUrl(item.bookingId)}
+                            aria-label="Добавить в календарь"
+                            title="Добавить в календарь"
+                          >
+                            <CalendarIcon />
                           </a>
                         </div>
                       ) : null}

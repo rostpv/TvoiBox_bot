@@ -20,9 +20,19 @@ interface RequestBookingBody {
   clientComment?: string | null;
 }
 
+interface CreateNoSlotRequestBody {
+  preferredDays?: string[];
+  preferredTime?: string | null;
+  clientComment?: string | null;
+}
+
 interface ClientTrainingActionBody {
   bookingId?: string;
   clientComment?: string;
+}
+
+interface ClientNoSlotRequestActionBody {
+  requestId?: string;
 }
 
 interface ClientRescheduleBody extends ClientTrainingActionBody {
@@ -112,6 +122,16 @@ export class WebBookingController {
     return this.webBookingService.getAvailableSlots(this.extractBearerToken(authorization));
   }
 
+  @Get("client/closure-info")
+  async getClientClosureInfo(@Headers("authorization") authorization?: string) {
+    return this.webBookingService.getClientClosureInfo(this.extractBearerToken(authorization));
+  }
+
+  @Get("client/booking-rules")
+  async getClientBookingRules() {
+    return this.webBookingService.getClientBookingRules();
+  }
+
   @Post("client/bookings/request")
   async requestBooking(@Headers("authorization") authorization: string | undefined, @Body() body: RequestBookingBody) {
     if (!body || typeof body !== "object") {
@@ -188,6 +208,35 @@ export class WebBookingController {
     return this.webBookingService.declineProposedBookingTime(this.extractBearerToken(authorization), {
       bookingId: body.bookingId ?? "",
       decisionNote: body.decisionNote,
+    });
+  }
+
+  @Post("client/no-slot-requests")
+  async createNoSlotRequest(@Headers("authorization") authorization: string | undefined, @Body() body: CreateNoSlotRequestBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.createNoSlotRequest(this.extractBearerToken(authorization), {
+      preferredDays: body.preferredDays ?? [],
+      preferredTime: body.preferredTime ?? null,
+      clientComment: body.clientComment ?? null,
+    });
+  }
+
+  @Get("client/no-slot-requests")
+  async getClientNoSlotRequests(@Headers("authorization") authorization: string | undefined) {
+    return this.webBookingService.getClientNoSlotRequests(this.extractBearerToken(authorization));
+  }
+
+  @Post("client/no-slot-requests/archive")
+  async archiveClientNoSlotRequest(@Headers("authorization") authorization: string | undefined, @Body() body: ClientNoSlotRequestActionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.archiveClientNoSlotRequest(this.extractBearerToken(authorization), {
+      requestId: body.requestId ?? "",
     });
   }
 
