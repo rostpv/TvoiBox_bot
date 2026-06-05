@@ -240,6 +240,64 @@ export function WebBookingPage() {
     }
   };
 
+  const handleCancelRecord = async (bookingId: string) => {
+    const shouldCancel = window.confirm("Отменить эту запись?");
+    if (!shouldCancel) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.cancelTraining({ bookingId });
+      await loadBookingContext();
+      setMessage({ tone: "success", text: "Запись отменена." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось отменить запись." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAcceptProposal = async (bookingId: string) => {
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.acceptProposal({ bookingId });
+      await loadBookingContext();
+      setMessage({ tone: "success", text: "Новое время подтверждено." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось принять перенос." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeclineProposal = async (bookingId: string) => {
+    const shouldDecline = window.confirm("Отклонить предложенное время?");
+    if (!shouldDecline) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.declineProposal({ bookingId });
+      await loadBookingContext();
+      setMessage({ tone: "success", text: "Предложенное время отклонено." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось отклонить перенос." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleLogout = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     api.setToken(null);
@@ -474,6 +532,23 @@ export function WebBookingPage() {
                             <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
                               Добавить в календарь
                             </a>
+                          </div>
+                        ) : null}
+                        {item.hasTrainerProposal ? (
+                          <div className="workout-card__actions">
+                            <button className="action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleAcceptProposal(item.bookingId)}>
+                              Принять время
+                            </button>
+                            <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleDeclineProposal(item.bookingId)}>
+                              Отклонить
+                            </button>
+                          </div>
+                        ) : null}
+                        {item.canCancel && item.bookingStatus !== "CANCELLED" ? (
+                          <div className="workout-card__actions">
+                            <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleCancelRecord(item.bookingId)}>
+                              Отменить запись
+                            </button>
                           </div>
                         ) : null}
                       </article>

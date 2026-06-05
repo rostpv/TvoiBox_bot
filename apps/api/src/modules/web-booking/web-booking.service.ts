@@ -107,6 +107,42 @@ export class WebBookingService {
     return this.bookingsService.getClientTrainingCalendarFile(session.client.telegramId, bookingId);
   }
 
+  async cancelClientTraining(token: string, input: {
+    bookingId: string;
+    clientComment?: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.bookingsService.cancelTrainingByClient({
+      telegramId: session.client.telegramId,
+      bookingId: input.bookingId,
+      clientComment: input.clientComment,
+    });
+  }
+
+  async acceptProposedBookingTime(token: string, input: {
+    bookingId: string;
+    decisionNote?: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.bookingsService.acceptProposedBookingTime({
+      telegramId: session.client.telegramId,
+      bookingId: input.bookingId,
+      decisionNote: input.decisionNote,
+    });
+  }
+
+  async declineProposedBookingTime(token: string, input: {
+    bookingId: string;
+    decisionNote?: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.bookingsService.declineProposedBookingTime({
+      telegramId: session.client.telegramId,
+      bookingId: input.bookingId,
+      decisionNote: input.decisionNote,
+    });
+  }
+
   createTrainerSession(input: { secret: string }) {
     const configuredSecret = this.appConfigService.values.webTrainerLoginSecret.trim();
     const providedSecret = input.secret.trim();

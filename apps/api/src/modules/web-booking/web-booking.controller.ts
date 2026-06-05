@@ -19,6 +19,16 @@ interface RequestBookingBody {
   clientComment?: string | null;
 }
 
+interface ClientTrainingActionBody {
+  bookingId?: string;
+  clientComment?: string;
+}
+
+interface ClientProposalDecisionBody {
+  bookingId?: string;
+  decisionNote?: string;
+}
+
 interface ClientTrainingsQuery {
   includeArchived?: string;
 }
@@ -111,6 +121,42 @@ export class WebBookingController {
   async getClientTrainings(@Headers("authorization") authorization: string | undefined, @Query() query: ClientTrainingsQuery) {
     return this.webBookingService.getClientTrainings(this.extractBearerToken(authorization), {
       includeArchived: query.includeArchived === "true",
+    });
+  }
+
+  @Post("client/trainings/cancel")
+  async cancelClientTraining(@Headers("authorization") authorization: string | undefined, @Body() body: ClientTrainingActionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.cancelClientTraining(this.extractBearerToken(authorization), {
+      bookingId: body.bookingId ?? "",
+      clientComment: body.clientComment,
+    });
+  }
+
+  @Post("client/bookings/proposal/accept")
+  async acceptProposal(@Headers("authorization") authorization: string | undefined, @Body() body: ClientProposalDecisionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.acceptProposedBookingTime(this.extractBearerToken(authorization), {
+      bookingId: body.bookingId ?? "",
+      decisionNote: body.decisionNote,
+    });
+  }
+
+  @Post("client/bookings/proposal/decline")
+  async declineProposal(@Headers("authorization") authorization: string | undefined, @Body() body: ClientProposalDecisionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.declineProposedBookingTime(this.extractBearerToken(authorization), {
+      bookingId: body.bookingId ?? "",
+      decisionNote: body.decisionNote,
     });
   }
 

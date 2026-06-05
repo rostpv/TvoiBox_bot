@@ -66,6 +66,10 @@ interface CreateBookingResponse {
   };
 }
 
+interface BookingActionResponse {
+  status: "confirmed" | "rejected" | "proposed" | "cancelled" | "rescheduled" | "resynced" | "archived";
+}
+
 export class WebBookingApi {
   private readonly baseUrl = getMiniAppApiBaseUrl();
   private token: string | null = null;
@@ -123,6 +127,27 @@ export class WebBookingApi {
 
   async getTrainings(): Promise<TrainingsResponse> {
     return this.authRequest<TrainingsResponse>("/web/client/trainings", { method: "GET" });
+  }
+
+  async cancelTraining(payload: { bookingId: string; clientComment?: string }): Promise<BookingActionResponse> {
+    return this.authRequest<BookingActionResponse>("/web/client/trainings/cancel", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async acceptProposal(payload: { bookingId: string; decisionNote?: string }): Promise<BookingActionResponse> {
+    return this.authRequest<BookingActionResponse>("/web/client/bookings/proposal/accept", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async declineProposal(payload: { bookingId: string; decisionNote?: string }): Promise<BookingActionResponse> {
+    return this.authRequest<BookingActionResponse>("/web/client/bookings/proposal/decline", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 
   private async authRequest<T>(path: string, options: RequestInit): Promise<T> {
