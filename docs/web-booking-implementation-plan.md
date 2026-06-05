@@ -424,7 +424,7 @@
 Задачи:
 
 - [x] Проверить `.env.server.example`, если появились новые переменные.
-- [ ] Проверить production secrets, если появились новые secrets.
+- [x] Проверить production secrets, если появились новые secrets.
 - [x] Проверить миграцию базы на тестовом/локальном контуре.
 - [ ] Подготовить commit с кодом.
 - [ ] Запустить deploy через GitHub Actions.
@@ -449,6 +449,7 @@
 - 2026-06-05: подготовлен ручной smoke/QA-скрипт `corepack pnpm qa:web-booking`; перед production deploy его нужно выполнить на доступном API/БД контуре вместе с проверкой Telegram mini app.
 - 2026-06-05: README и production runbook дополнены инструкцией запуска `corepack pnpm qa:web-booking`, списком нужных env и перечнем проверяемых сценариев.
 - 2026-06-05: локально выполнен `corepack pnpm qa:web-booking` на API `http://localhost:3000` и Docker Postgres; Google Calendar был в mock-режиме, поэтому production deploy всё ещё требует отдельной проверки реального календаря.
+- 2026-06-05: на VPS проверено наличие `WEB_TRAINER_LOGIN_SECRET` в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`: строка одна, значение непустое, права файла `600`. Значение секрета не выводилось и не сохранялось в репозитории.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
