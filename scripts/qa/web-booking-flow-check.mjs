@@ -1,11 +1,25 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
+const MOSCOW_TIME_ZONE = "Europe/Moscow";
 const PLACEHOLDER_TELEGRAM_IDS = new Set([
   "123456789",
   "PUT_TRAINER_TELEGRAM_ID_HERE",
   "PUT_ADMIN_TELEGRAM_ID_HERE",
 ]);
+const MOSCOW_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: MOSCOW_TIME_ZONE,
+  weekday: "long",
+});
+const MOSCOW_HOUR_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: MOSCOW_TIME_ZONE,
+  hour: "2-digit",
+  hour12: false,
+});
+const MOSCOW_MINUTE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  timeZone: MOSCOW_TIME_ZONE,
+  minute: "2-digit",
+});
 
 function parseEnv(content) {
   const result = {};
@@ -90,14 +104,88 @@ function addHours(date, hours) {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
 
-function toFullHourUtc(date) {
+function addMinutes(date, minutes) {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function toNextQuarterHourUtc(date) {
   const result = new Date(date);
-  result.setUTCMinutes(0, 0, 0);
+  const minutes = result.getUTCMinutes();
+  result.setUTCMinutes(Math.ceil(minutes / 15) * 15, 0, 0);
+  if (result.getTime() < date.getTime()) {
+    result.setUTCMinutes(result.getUTCMinutes() + 15, 0, 0);
+  }
+
   return result;
 }
 
-async function openSlot(apiBaseUrl, trainerTelegramId, startAt) {
-  const endAt = addHours(startAt, 1);
+function getMoscowWeekday(date) {
+  return MOSCOW_WEEKDAY_FORMATTER.format(date).toLowerCase();
+}
+
+function getMoscowHour(date) {
+  return Number(MOSCOW_HOUR_FORMATTER.format(date));
+}
+
+function getMoscowMinuteOfDay(date) {
+  return getMoscowHour(date) * 60 + Number(MOSCOW_MINUTE_FORMATTER.format(date));
+}
+
+async function getTrainerSettings(apiBaseUrl, trainerTelegramId) {
+  const response = await requestJson(
+    `${apiBaseUrl}/trainer-settings/current?trainerTelegramId=${encodeURIComponent(trainerTelegramId)}`,
+    { method: "GET" },
+  );
+
+  return response.settings;
+}
+
+async function listTrainerGrid(apiBaseUrl, trainerTelegramId, from, to) {
+  const params = new URLSearchParams({
+    trainerTelegramId,
+    from: from.toISOString(),
+    to: to.toISOString(),
+  });
+
+  return requestJson(`${apiBaseUrl}/slots/trainer-grid?${params.toString()}`, { method: "GET" });
+}
+
+async function pickTestSlotFromTrainerGrid(apiBaseUrl, trainerTelegramId, settings) {
+  const now = new Date();
+  const from = toNextQuarterHourUtc(now);
+  const to = addMinutes(from, (settings.bookingHorizonDays + 1) * 24 * 60);
+  const cutoffMoment = addHours(now, settings.sameDayBookingCutoff);
+  const grid = await listTrainerGrid(apiBaseUrl, trainerTelegramId, from, to);
+  const candidates = (grid || []).filter((slot) => {
+    const startAt = new Date(slot.startAt);
+    const endAt = new Date(slot.endAt);
+    const weekday = getMoscowWeekday(startAt);
+    const minuteOfDay = getMoscowMinuteOfDay(startAt);
+    const endMinuteOfDay = getMoscowMinuteOfDay(endAt);
+    const workdayStartMinute = settings.workdayStartMinute ?? settings.workdayStartHour * 60;
+    const workdayEndMinute = settings.workdayEndMinute ?? settings.workdayEndHour * 60;
+
+    return slot.status === "CLOSED"
+      && startAt.getTime() >= cutoffMoment.getTime()
+      && settings.workingDays.includes(weekday)
+      && minuteOfDay >= workdayStartMinute
+      && endMinuteOfDay <= workdayEndMinute;
+  });
+
+  const candidate = candidates[0];
+  if (!candidate) {
+    throw new Error("Не удалось найти тестовый слот в trainer-grid");
+  }
+
+  return {
+    startAt: new Date(candidate.startAt),
+    endAt: new Date(candidate.endAt),
+    durationMinutes: Math.round((new Date(candidate.endAt).getTime() - new Date(candidate.startAt).getTime()) / 60_000),
+  };
+}
+
+async function openSlot(apiBaseUrl, trainerTelegramId, startAt, durationMinutes) {
+  const endAt = addMinutes(startAt, durationMinutes);
 
   await requestJson(`${apiBaseUrl}/slots/open`, {
     method: "POST",
@@ -207,8 +295,10 @@ async function main() {
     throw new Error("WEB_TRAINER_LOGIN_SECRET обязателен для web trainer QA");
   }
 
-  const slotStartAt = addHours(toFullHourUtc(new Date()), 96);
-  await openSlot(apiBaseUrl, trainerTelegramId, slotStartAt);
+  const trainerSettings = await getTrainerSettings(apiBaseUrl, trainerTelegramId);
+  const testSlot = await pickTestSlotFromTrainerGrid(apiBaseUrl, trainerTelegramId, trainerSettings);
+  const slotStartAt = testSlot.startAt;
+  await openSlot(apiBaseUrl, trainerTelegramId, slotStartAt, testSlot.durationMinutes);
   await ensureTelegramClient(apiBaseUrl, telegramConflictClientId);
 
   const clientPhoneSuffix = String(Date.now()).slice(-8);
@@ -337,19 +427,20 @@ async function main() {
   }
 
   const telegramSlotsAfterCancel = await listTelegramAvailableSlots(apiBaseUrl, telegramConflictClientId);
-  const telegramSlotVisibleAfterCancel = (telegramSlotsAfterCancel || []).some(
+  const telegramSlotVisibleAfterTrainerCancel = (telegramSlotsAfterCancel || []).some(
     (item) => item.startAt === slotStartAt.toISOString(),
   );
-  if (!telegramSlotVisibleAfterCancel) {
-    throw new Error("После отмены web-записи слот не вернулся в доступные для Telegram-клиента");
+  if (telegramSlotVisibleAfterTrainerCancel) {
+    throw new Error("После отмены тренером web-записи слот неожиданно остался доступным для Telegram-клиента");
   }
 
   console.log("Web booking flow check: OK");
   console.log(`API base URL: ${apiBaseUrl}`);
   console.log(`Web booking: ${bookingResponse.booking.id}`);
   console.log(`Confirmed training starts at: ${confirmedTraining.startAt}`);
-  console.log("Trainer cancellation cleanup: OK");
+  console.log("Trainer cancellation cleanup: OK, slot stayed closed by existing trainer-cancel policy");
   console.log(`Telegram conflict client: ${telegramConflictClientId}`);
+  console.log(`Trainer settings: ${JSON.stringify(trainerSettings)}`);
 }
 
 main().catch((error) => {
