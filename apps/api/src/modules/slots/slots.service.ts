@@ -18,6 +18,7 @@ export interface OpenSlotsInput {
   trainerTelegramId: string;
   startAt: string;
   endAt?: string;
+  scheduledOnly?: boolean;
 }
 
 export interface CloseSlotsInput {
@@ -26,6 +27,7 @@ export interface CloseSlotsInput {
   startAt?: string;
   endAt?: string;
   reason?: string | null;
+  scheduledOnly?: boolean;
 }
 
 export interface GetAvailableSlotsInput {
@@ -112,7 +114,9 @@ export class SlotsService {
     const startAt = this.parseIsoDate("startAt", input.startAt);
     const slotDurationMs = this.getSlotDurationMs(settings);
     const endAt = input.endAt ? this.parseIsoDate("endAt", input.endAt) : new Date(startAt.getTime() + slotDurationMs);
-    const ranges = this.buildSlotRanges(startAt, endAt, slotDurationMs);
+    const ranges = input.scheduledOnly
+      ? this.buildScheduledSlotRanges(startAt, endAt, settings)
+      : this.buildSlotRanges(startAt, endAt, slotDurationMs);
 
     let created = 0;
     let reopened = 0;
@@ -256,7 +260,9 @@ export class SlotsService {
     }
 
     const settings = await this.ensureTrainerSettings();
-    const ranges = this.buildSlotRanges(startAt, endAt, this.getSlotDurationMs(settings));
+    const ranges = input.scheduledOnly
+      ? this.buildScheduledSlotRanges(startAt, endAt, settings)
+      : this.buildSlotRanges(startAt, endAt, this.getSlotDurationMs(settings));
     let closed = 0;
     let skippedBooked = 0;
 
@@ -327,26 +333,53 @@ export class SlotsService {
     if (endAt.getTime() <= startAt.getTime()) {
       throw new BadRequestException("endAt must be greater than startAt");
     }
-    const result = await this.prismaService.slot.updateMany({
-      where: {
-        startAt: {
-          gte: startAt,
-          lt: endAt,
+    if (!input.scheduledOnly) {
+      const result = await this.prismaService.slot.updateMany({
+        where: {
+          startAt: {
+            gte: startAt,
+            lt: endAt,
+          },
+          status: SlotStatus.CLOSED,
+          isManuallyClosed: true,
         },
-        status: SlotStatus.CLOSED,
-        isManuallyClosed: true,
-      },
-      data: {
-        status: SlotStatus.OPEN,
-        isManuallyClosed: false,
-        closureReason: null,
-        heldUntil: null,
-      },
+        data: {
+          status: SlotStatus.OPEN,
+          isManuallyClosed: false,
+          closureReason: null,
+          heldUntil: null,
+        },
+      });
+
+      return {
+        reopened: result.count,
+      };
+    }
+
+    const ranges = this.buildScheduledSlotRanges(startAt, endAt, settings);
+    let reopened = 0;
+
+    await this.prismaService.$transaction(async (transaction) => {
+      for (const range of ranges) {
+        const result = await transaction.slot.updateMany({
+          where: {
+            startAt: range.startAt,
+            endAt: range.endAt,
+            status: SlotStatus.CLOSED,
+            isManuallyClosed: true,
+          },
+          data: {
+            status: SlotStatus.OPEN,
+            isManuallyClosed: false,
+            closureReason: null,
+            heldUntil: null,
+          },
+        });
+        reopened += result.count;
+      }
     });
 
-    return {
-      reopened: result.count,
-    };
+    return { reopened };
   }
 
   private async hasActiveOccupation(transaction: Prisma.TransactionClient, slotId: string): Promise<boolean> {

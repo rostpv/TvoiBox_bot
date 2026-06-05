@@ -559,8 +559,14 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
   }, [screen, slotRange.from, slotRange.to, settingsMeta.bookingHorizonDays, slotRangeWasCustomized]);
 
   function openSlotsScreen() {
+    const range = buildRangeWithDays(settingsMeta.bookingHorizonDays);
     setSlotRangeWasCustomized(false);
-    setSlotRange(buildRangeWithDays(settingsMeta.bookingHorizonDays));
+    setSlotRange(range);
+    setBulkSlotForm((current) => ({
+      ...current,
+      startAt: range.from,
+      endAt: range.to,
+    }));
     setScreen("slots");
   }
 
@@ -920,6 +926,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
         startAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.startAt),
         endAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.endAt),
         reason: bulkSlotForm.reason || null,
+        scheduledOnly: true,
       });
       await loadSlots();
     }, "Диапазон слотов закрыт.");
@@ -930,6 +937,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       await api.openTrainerSlots({
         startAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.startAt),
         endAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.endAt),
+        scheduledOnly: true,
       });
       await loadSlots();
     }, "Диапазон слотов открыт.");
@@ -940,6 +948,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
       await api.reopenTrainerSlots({
         startAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.startAt),
         endAt: toMoscowIsoDateTimeOrThrow(bulkSlotForm.endAt),
+        scheduledOnly: true,
       });
       await loadSlots();
     }, "Диапазон слотов переоткрыт.");
@@ -1948,6 +1957,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   <span className="field-label">Начало</span>
                   <input
                     type="datetime-local"
+                    step={15 * 60}
                     value={bulkSlotForm.startAt}
                     onChange={(event) => setBulkSlotForm((current) => ({ ...current, startAt: event.target.value }))}
                   />
@@ -1956,6 +1966,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                   <span className="field-label">Конец</span>
                   <input
                     type="datetime-local"
+                    step={15 * 60}
                     value={bulkSlotForm.endAt}
                     onChange={(event) => setBulkSlotForm((current) => ({ ...current, endAt: event.target.value }))}
                   />

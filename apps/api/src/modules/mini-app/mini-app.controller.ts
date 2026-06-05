@@ -98,6 +98,7 @@ interface TrainerForceCloseBody extends TrainerBookingActionBody {
 interface TrainerOpenSlotsBody {
   startAt?: string;
   endAt?: string;
+  scheduledOnly?: boolean;
 }
 
 interface TrainerCloseSlotsBody extends TrainerOpenSlotsBody {
@@ -551,6 +552,7 @@ export class MiniAppController {
       trainerTelegramId: session.telegramId,
       startAt: body.startAt ?? "",
       endAt: body.endAt,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 
@@ -567,6 +569,7 @@ export class MiniAppController {
       startAt: body.startAt,
       endAt: body.endAt,
       reason: body.reason,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 
@@ -581,6 +584,7 @@ export class MiniAppController {
       trainerTelegramId: session.telegramId,
       startAt: body.startAt ?? "",
       endAt: body.endAt,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 

@@ -485,6 +485,7 @@
 - 2026-06-05: README и production runbook обновлены: добавлен `WEB_TRAINER_LOGIN_SECRET`, описано применение Prisma-схемы через deploy `migrate` service.
 - 2026-06-05: emergency runbook обновлён: добавлены URL `/booking` и `/trainer`, быстрые curl-проверки и диагностика web-записи/web-кабинета тренера.
 - 2026-06-05: в плане зафиксированы новые API endpoints `/web/client/*`, `/web/trainer/session`, изменения модели `Client`, `Booking`, `WebClientSession`, а также URL `https://app.tvoybox.ru/booking` и `https://app.tvoybox.ru/trainer`.
+- 2026-06-05: исправлено диапазонное управление слотами в тренерском экране: bulk-открытие, закрытие и переоткрытие теперь применяются к слотам расписания тренера, которые видны в сетке, а не к технической цепочке интервалов от произвольного времени.
 
 ## Риски и ограничения
 

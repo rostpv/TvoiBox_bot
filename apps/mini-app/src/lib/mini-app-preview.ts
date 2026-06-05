@@ -1116,7 +1116,7 @@ export class MiniAppPreviewRuntime {
     return buildPreviewSlots(readPreviewState(), params.from, params.to);
   }
 
-  openTrainerSlots(payload: { startAt: string; endAt?: string }): void {
+  openTrainerSlots(payload: { startAt: string; endAt?: string; scheduledOnly?: boolean }): void {
     const state = readPreviewState();
     const from = payload.startAt;
     const to = payload.endAt ?? payload.startAt;
@@ -1124,7 +1124,7 @@ export class MiniAppPreviewRuntime {
     writePreviewState(state);
   }
 
-  closeTrainerSlots(payload: { slotId?: string; startAt?: string; endAt?: string }): void {
+  closeTrainerSlots(payload: { slotId?: string; startAt?: string; endAt?: string; scheduledOnly?: boolean }): void {
     const state = readPreviewState();
     const from = payload.slotId ? parseSlotId(payload.slotId) : payload.startAt;
     const to = payload.endAt ?? from;
@@ -1144,7 +1144,7 @@ export class MiniAppPreviewRuntime {
     writePreviewState(state);
   }
 
-  reopenTrainerSlots(payload: { startAt: string; endAt?: string }): void {
+  reopenTrainerSlots(payload: { startAt: string; endAt?: string; scheduledOnly?: boolean }): void {
     this.openTrainerSlots(payload);
   }
 

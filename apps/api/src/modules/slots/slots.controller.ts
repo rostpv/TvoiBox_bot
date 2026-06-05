@@ -6,6 +6,7 @@ interface OpenSlotsBody {
   trainerTelegramId?: string;
   startAt?: string;
   endAt?: string;
+  scheduledOnly?: boolean;
 }
 
 interface CloseSlotsBody {
@@ -14,6 +15,7 @@ interface CloseSlotsBody {
   startAt?: string;
   endAt?: string;
   reason?: string | null;
+  scheduledOnly?: boolean;
 }
 
 interface AvailableSlotsQuery {
@@ -46,6 +48,7 @@ export class SlotsController {
       trainerTelegramId: body.trainerTelegramId ?? "",
       startAt: body.startAt ?? "",
       endAt: body.endAt,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 
@@ -61,6 +64,7 @@ export class SlotsController {
       startAt: body.startAt,
       endAt: body.endAt,
       reason: body.reason,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 
@@ -74,6 +78,7 @@ export class SlotsController {
       trainerTelegramId: body.trainerTelegramId ?? "",
       startAt: body.startAt ?? "",
       endAt: body.endAt,
+      scheduledOnly: body.scheduledOnly,
     });
   }
 

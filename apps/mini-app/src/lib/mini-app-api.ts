@@ -639,7 +639,7 @@ export class MiniAppApi {
     return this.authRequest<AvailableSlot[]>(`/mini-app/trainer/slots?${search.toString()}`, { method: "GET" });
   }
 
-  async openTrainerSlots(payload: { startAt: string; endAt?: string }): Promise<void> {
+  async openTrainerSlots(payload: { startAt: string; endAt?: string; scheduledOnly?: boolean }): Promise<void> {
     if (this.shouldUsePreview()) {
       this.preview.openTrainerSlots(payload);
       return;
@@ -651,7 +651,13 @@ export class MiniAppApi {
     });
   }
 
-  async closeTrainerSlots(payload: { slotId?: string; startAt?: string; endAt?: string; reason?: string | null }): Promise<void> {
+  async closeTrainerSlots(payload: {
+    slotId?: string;
+    startAt?: string;
+    endAt?: string;
+    reason?: string | null;
+    scheduledOnly?: boolean;
+  }): Promise<void> {
     if (this.shouldUsePreview()) {
       this.preview.closeTrainerSlots(payload);
       return;
@@ -663,7 +669,7 @@ export class MiniAppApi {
     });
   }
 
-  async reopenTrainerSlots(payload: { startAt: string; endAt?: string }): Promise<void> {
+  async reopenTrainerSlots(payload: { startAt: string; endAt?: string; scheduledOnly?: boolean }): Promise<void> {
     if (this.shouldUsePreview()) {
       this.preview.reopenTrainerSlots(payload);
       return;
