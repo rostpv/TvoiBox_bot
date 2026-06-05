@@ -2,7 +2,7 @@
 
 Дата создания: 2026-06-05.
 
-Статус: код web-записи и web-кабинета тренера подготовлен на безопасной ветке `codex/web-booking-foundation`; локальные `typecheck`, production build mini app и smoke `qa:web-booking` прошли. Production secret добавлен и проверен на VPS, production health до деплоя зелёный. Deploy в `main`, проверка web-страниц в production, реальный Google Calendar и полный Telegram regression ещё не выполнялись.
+Статус: код web-записи и web-кабинета тренера задеплоен в production на release `689755bdf0f86c111c0d045accdebf1d9f446d9a`. После нештатного GitHub Actions deploy VPS был перезагружен, включён swap 2 ГБ, вручную пересобраны образы, применена Prisma-схема и подняты контейнеры. `https://api.tvoybox.ru/health`, `https://app.tvoybox.ru/booking` и `https://app.tvoybox.ru/trainer` отвечают `200`; бот поднял Telegram webhook. Реальный Google Calendar и создание тестовой production-заявки ещё не проверялись.
 
 Цель: добавить мобильную web-версию записи вне Telegram, чтобы клиенты могли записываться из обычного браузера, а все заявки синхронизировались с текущей mini app, ботом, тренерским контуром, Google Calendar и общей базой. Сразу предусмотреть web-кабинет тренера как резервный канал на случай, если Telegram недоступен.
 
@@ -427,16 +427,16 @@
 - [x] Проверить production secrets, если появились новые secrets.
 - [x] Проверить миграцию базы на тестовом/локальном контуре.
 - [x] Подготовить commit с кодом.
-- [ ] Запустить deploy через GitHub Actions.
-- [ ] Проверить API health.
-- [ ] Проверить web-запись в production.
-- [ ] Проверить web-кабинет тренера в production.
-- [ ] Проверить Telegram mini app в production.
+- [x] Запустить deploy через GitHub Actions.
+- [x] Проверить API health.
+- [x] Проверить web-запись в production.
+- [x] Проверить web-кабинет тренера в production.
+- [x] Проверить Telegram mini app в production.
 - [ ] Проверить Google Calendar в production.
 
 Результат шага:
 
-- [ ] Web-запись доступна в production.
+- [x] Web-запись доступна в production.
 - [ ] Telegram mini app работает как раньше.
 - [ ] Тренерский контур принимает заявки из обоих источников.
 
@@ -452,6 +452,10 @@
 - 2026-06-05: на VPS проверено наличие `WEB_TRAINER_LOGIN_SECRET` в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`: строка одна, значение непустое, права файла `600`. Значение секрета не выводилось и не сохранялось в репозитории.
 - 2026-06-05: финальный локальный преддеплойный аудит прошёл: `corepack pnpm --filter @tvoy-box/api typecheck`, `corepack pnpm --filter @tvoy-box/mini-app build`, повторный `corepack pnpm typecheck` и `node --check scripts\qa\web-booking-flow-check.mjs` завершились успешно. Первый параллельный запуск общего typecheck пересёкся с `next build` и временно упал на пересоздании `.next/types`; последовательный повтор прошёл.
 - 2026-06-05: production до деплоя проверен без изменений: `https://api.tvoybox.ru/health` и `https://app.tvoybox.ru` вернули `200`; контейнеры `api`, `bot`, `mini-app`, `postgres` на VPS в состоянии `running`, API/mini-app/Postgres healthy. Текущий production release указывает на `/opt/stack/tvoy-box-bot-deploy/releases/993eebb70dc0f979af7141c78cae0c28a8536485`; новый web-код ещё не деплоился.
+- 2026-06-05: `main` обновлён до `689755bdf0f86c111c0d045accdebf1d9f446d9a`; GitHub Actions deploy стартовал, но завершился `failure` на удалённом deploy-шаге. Release был загружен на VPS и `current` переключился, но Docker-образы остались старыми, поэтому `/booking`, `/trainer` и `/web/*` сначала отдавали `404`.
+- 2026-06-05: после перезагрузки VPS production восстановлен вручную: включён swap-файл 2 ГБ (`/swapfile`), пересобраны образы `api`, `mini-app`, `bot`, применена Prisma-схема через `prisma db push --accept-data-loss`, затем контейнеры пересозданы. Перед применением схемы создан backup `shared/manual-backups/before-web-deploy-20260605-142423.sql`; в production на момент backup было `clients=1`, `bookings=2`.
+- 2026-06-05: production smoke после восстановления прошёл: `https://api.tvoybox.ru/health` вернул `200` и `database.status=ok`; `https://app.tvoybox.ru/booking` и `https://app.tvoybox.ru/trainer` вернули `200`; корневая mini app страница `https://app.tvoybox.ru/` вернула `200`; Playwright дождался кнопок `Продолжить` и `Войти`, консоль без warnings/errors. `/web/trainer/session` на production secret вернул `201` и trainer token. API logs показывают mapped `/web/*` routes, mini app `Ready`, bot token validated и webhook started. Полный Telegram regression внутри Telegram не выполнялся.
+- 2026-06-05: Google Calendar в production и создание реальной production web-заявки не проверялись, чтобы не создавать тестовую запись/событие без отдельного решения.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
