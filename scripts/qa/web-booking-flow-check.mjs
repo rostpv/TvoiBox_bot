@@ -311,10 +311,44 @@ async function main() {
     throw new Error("Подтверждённая web-запись не появилась в /web/client/trainings");
   }
 
+  const cancelResult = await authJson(apiBaseUrl, "/mini-app/trainer/trainings/cancel", trainerSession.token, {
+    method: "POST",
+    body: JSON.stringify({
+      bookingId: bookingResponse.booking.id,
+      trainerComment: "web-booking-flow-check cleanup",
+    }),
+  });
+
+  if (cancelResult.status !== "cancelled" || cancelResult.booking.status !== "CANCELLED") {
+    throw new Error("Отмена подтверждённой web-записи вернула неожиданный статус");
+  }
+
+  const archivedTrainings = await authJson(
+    apiBaseUrl,
+    "/web/client/trainings?includeArchived=true",
+    firstClient.token,
+    { method: "GET" },
+  );
+  const cancelledTraining = (archivedTrainings.items || []).find(
+    (item) => item.bookingId === bookingResponse.booking.id,
+  );
+  if (!cancelledTraining || cancelledTraining.bookingStatus !== "CANCELLED") {
+    throw new Error("Отменённая web-запись не появилась в web-истории клиента");
+  }
+
+  const telegramSlotsAfterCancel = await listTelegramAvailableSlots(apiBaseUrl, telegramConflictClientId);
+  const telegramSlotVisibleAfterCancel = (telegramSlotsAfterCancel || []).some(
+    (item) => item.startAt === slotStartAt.toISOString(),
+  );
+  if (!telegramSlotVisibleAfterCancel) {
+    throw new Error("После отмены web-записи слот не вернулся в доступные для Telegram-клиента");
+  }
+
   console.log("Web booking flow check: OK");
   console.log(`API base URL: ${apiBaseUrl}`);
   console.log(`Web booking: ${bookingResponse.booking.id}`);
   console.log(`Confirmed training starts at: ${confirmedTraining.startAt}`);
+  console.log("Trainer cancellation cleanup: OK");
   console.log(`Telegram conflict client: ${telegramConflictClientId}`);
 }
 
