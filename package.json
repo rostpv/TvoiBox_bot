@@ -23,6 +23,7 @@
     "qa:stage8-admin-bookings": "node scripts/qa/stage8-admin-bookings-flow-check.mjs",
     "qa:stage28-calendar": "node scripts/qa/stage28-calendar-flow-check.mjs",
     "qa:stage28-slot-reserve": "node scripts/qa/stage28-slot-reserve-conflict-check.mjs",
+    "qa:web-booking": "node scripts/qa/web-booking-flow-check.mjs",
     "qa:google-calendar-creds": "node scripts/qa/google-calendar-credentials-check.mjs",
     "build": "corepack pnpm -r --workspace-concurrency=1 build",
     "typecheck": "corepack pnpm -r typecheck",

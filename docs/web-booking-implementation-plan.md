@@ -350,6 +350,7 @@
 Лог:
 
 - 2026-06-05: этап запланирован, не начат.
+- 2026-06-05: добавлен ручной QA-скрипт `corepack pnpm qa:web-booking`, который на живом API/БД открывает слот, создаёт web-заявку и проверяет, что вторая web-заявка не может занять уже удержанный слот. Скрипт нужно запускать после доступности локального Docker/Postgres или VPS.
 
 ## Шаг 9: протестировать полный сценарий
 
@@ -400,6 +401,7 @@
 Лог:
 
 - 2026-06-05: этап запланирован, не начат.
+- 2026-06-05: добавлен ручной QA-скрипт `corepack pnpm qa:web-booking` для проверки основного web-сценария: первый вход клиента, создание заявки, видимость заявки и email/source в тренерском контуре, подтверждение тренером и появление подтверждённой записи у web-клиента.
 
 ## Шаг 10: подготовить production deploy
 
@@ -428,6 +430,7 @@
 - 2026-06-05: `.env.example` и `.env.server.example` обновлены под `WEB_TRAINER_LOGIN_SECRET`; реальный production secret нужно добавить вручную в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server` перед деплоем.
 - 2026-06-05: локальный `prisma db push` не запускался: Docker Desktop установлен, но daemon недоступен из текущей сессии. Нужно повторить после запуска Docker Desktop или при наличии доступа к VPS.
 - 2026-06-05: проверено, что production deploy script `scripts/deploy/deploy-server.sh` уже запускает `migrate` service, а `deploy/compose.server.yml` выполняет `prisma db push --schema prisma/schema.prisma`. Для пустой production БД это подходящий путь применения текущей схемы, но перед push в `main` всё равно нужно добавить `WEB_TRAINER_LOGIN_SECRET` в `.env.server`.
+- 2026-06-05: подготовлен ручной smoke/QA-скрипт `corepack pnpm qa:web-booking`; перед production deploy его нужно выполнить на доступном API/БД контуре вместе с проверкой Telegram mini app.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
