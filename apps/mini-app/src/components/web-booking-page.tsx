@@ -17,6 +17,7 @@ interface ClientFormState {
 }
 
 type MessageTone = "success" | "error" | "info";
+type WebScreenId = "home" | "booking" | "records" | "profile";
 
 const SESSION_STORAGE_KEY = "tvoy-box-web-client-token";
 
@@ -123,6 +124,7 @@ export function WebBookingPage() {
   const [records, setRecords] = useState<WebClientTraining[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [comment, setComment] = useState("");
+  const [screen, setScreen] = useState<WebScreenId>("home");
   const [isBusy, setIsBusy] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ tone: MessageTone; text: string } | null>(null);
@@ -154,6 +156,7 @@ export function WebBookingPage() {
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
       await loadBookingContext();
+      setScreen("home");
     } catch {
       window.localStorage.removeItem(SESSION_STORAGE_KEY);
       api.setToken(null);
@@ -186,6 +189,7 @@ export function WebBookingPage() {
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
       await loadBookingContext();
+      setScreen("home");
       setMessage({
         tone: "success",
         text:
@@ -239,6 +243,7 @@ export function WebBookingPage() {
       setSelectedSlotId("");
       setComment("");
       await loadBookingContext();
+      setScreen("records");
       setMessage({ tone: "success", text: "Заявка отправлена тренеру. Статус появится в списке записей." });
     } catch (error) {
       const normalizedError = error as Error;
@@ -315,13 +320,21 @@ export function WebBookingPage() {
     setSelectedSlotId("");
     setComment("");
     setClientForm({ fullName: "", phone: "", email: "" });
+    setScreen("home");
     setMessage({ tone: "info", text: "Данные на этом устройстве очищены." });
+  };
+
+  const openScreen = (nextScreen: WebScreenId) => {
+    setScreen(nextScreen);
+    if (nextScreen === "booking" || nextScreen === "records") {
+      void loadBookingContext();
+    }
   };
 
   return (
     <main className="mini-app-page web-booking-page">
       <div className="mini-app-shell web-booking-shell">
-        <header className="topbar web-booking-topbar">
+        <header className={`topbar web-booking-topbar${profile && screen !== "home" ? " topbar-subpage" : ""}`}>
           <div className="brand">
             <Image className="brand-logo" src="/assets/logo-mark.png" alt="Твой Бокс" width={52} height={52} priority />
             <div className="brand-copy">
@@ -333,9 +346,21 @@ export function WebBookingPage() {
             </div>
           </div>
           {profile ? (
-            <button className="ghost-button" disabled={isSubmitting} onClick={handleLogout}>
-              Выйти
-            </button>
+            <div className="topbar-actions">
+              <button
+                className="icon-button"
+                aria-label="Профиль"
+                title="Профиль"
+                data-tooltip="Профиль"
+                disabled={isSubmitting}
+                onClick={() => openScreen("profile")}
+              >
+                П
+              </button>
+              <button className="ghost-button" disabled={isSubmitting} onClick={handleLogout}>
+                Выйти
+              </button>
+            </div>
           ) : null}
         </header>
 
@@ -345,21 +370,23 @@ export function WebBookingPage() {
           </div>
         ) : null}
 
-        <section className="hero-card web-booking-hero">
-          <div className="trainer-hero-grid">
-            <div className="trainer-hero-copy">
-              <p className="trainer-hero-eyebrow">ТВОЙ БОКС</p>
-              <h1 className="trainer-thought-title">Сила начинается не с удара</h1>
-              <p className="trainer-thought-lead">
-                Она начинается с уверенности в себе. Выберите удобный день и приходите на тренировку - без давления и
-                подготовки.
-              </p>
+        {(!profile || screen === "home") ? (
+          <section className="hero-card web-booking-hero">
+            <div className="trainer-hero-grid">
+              <div className="trainer-hero-copy">
+                <p className="trainer-hero-eyebrow">ТВОЙ БОКС</p>
+                <h1 className="trainer-thought-title">Сила начинается не с удара</h1>
+                <p className="trainer-thought-lead">
+                  Она начинается с уверенности в себе. Выберите удобный день и приходите на тренировку - без давления и
+                  подготовки.
+                </p>
+              </div>
+              <div className="trainer-frame web-booking-photo">
+                <Image className="trainer-photo" src="/assets/trainer.png" alt="Тренер Твой Бокс" width={240} height={300} priority />
+              </div>
             </div>
-            <div className="trainer-frame web-booking-photo">
-              <Image className="trainer-photo" src="/assets/trainer.png" alt="Тренер Твой Бокс" width={240} height={300} priority />
-            </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         {isBusy ? (
           <section className="panel">
@@ -423,157 +450,217 @@ export function WebBookingPage() {
           </section>
         ) : null}
 
-        {!isBusy && profile ? (
-          <div className="content-grid web-booking-grid">
-            <section className="panel web-booking-panel">
-              <div className="panel-header">
-                <div>
-                  <h2 className="panel-title">Выбор времени</h2>
-                  <p className="panel-text">Свободные слоты синхронизированы с Telegram mini app и расписанием тренера.</p>
-                </div>
-                <button className="secondary-button secondary-button-compact" disabled={isSubmitting} onClick={() => void loadBookingContext()}>
-                  Обновить
+        {!isBusy && profile && screen === "home" ? (
+          <section className="home-actions-grid home-actions-grid-compact">
+            <article className="action-card action-card-home">
+              <strong>Запись</strong>
+              <p>Выберите удобный день, время и отправьте запрос тренеру.</p>
+              <button className="primary-button action-card-button" disabled={isSubmitting} onClick={() => openScreen("booking")}>
+                Перейти к слотам
+              </button>
+            </article>
+
+            <article className="action-card action-card-home">
+              <strong>Мои тренировки</strong>
+              <p>Следите за заявками, подтверждениями, переносами и отменами в одном месте.</p>
+              <button className="secondary-button action-card-button" disabled={isSubmitting} onClick={() => openScreen("records")}>
+                Открыть список
+              </button>
+            </article>
+
+            <article className="action-card action-card-home">
+              <strong>Связь с тренером</strong>
+              <p>Если хочется что-то обсудить, можно быстро написать тренеру в Telegram.</p>
+              <a className="secondary-button support-link-button action-card-button" href="https://t.me/RostPV" target="_blank" rel="noreferrer">
+                Написать тренеру
+              </a>
+            </article>
+          </section>
+        ) : null}
+
+        {!isBusy && profile && screen === "booking" ? (
+          <section className="panel booking-panel web-booking-panel">
+            <div className="booking-header">
+              <button className="back-link" disabled={isSubmitting} onClick={() => openScreen("home")}>
+                ← Назад
+              </button>
+              <div>
+                <h2 className="panel-title">Запись на тренировку</h2>
+                <p className="panel-text">Выберите удобный день и время для занятия.</p>
+              </div>
+              <button className="secondary-button secondary-button-compact" disabled={isSubmitting} onClick={() => void loadBookingContext()}>
+                Обновить
+              </button>
+            </div>
+
+            {slotGroups.length === 0 ? (
+              <div className="empty-state">
+                <strong>Свободных слотов пока нет</strong>
+                <span>Попробуйте обновить список позже или свяжитесь с тренером вручную.</span>
+              </div>
+            ) : (
+              <div className="booking-groups">
+                {slotGroups.map((group) => (
+                  <section className="slot-day slot-day-compact" key={group.dayKey}>
+                    <div className="slot-day-header">
+                      <h3 className="slot-day-title">{group.title.replace(",", " ·")}</h3>
+                    </div>
+                    <div className="time-grid">
+                      {group.items.map((slot) => (
+                        <button
+                          className="time-button"
+                          data-active={selectedSlotId === slot.id}
+                          key={slot.id}
+                          onClick={() => setSelectedSlotId(slot.id)}
+                        >
+                          {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+
+            <div className="form-grid booking-form-grid web-booking-submit">
+              <label className="field">
+                <span className="field-label">Комментарий к заявке</span>
+                <textarea
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="например: удобнее после 18:00"
+                />
+              </label>
+              <button className="primary-button booking-submit-button" disabled={isSubmitting || !selectedSlotId} onClick={() => void handleRequestBooking()}>
+                Записаться
+              </button>
+            </div>
+          </section>
+        ) : null}
+
+        {!isBusy && profile && screen === "profile" ? (
+          <section className="panel web-booking-panel">
+            <div className="panel-header">
+              <div>
+                <h2 className="panel-title">Профиль</h2>
+                <p className="panel-text">Заполни данные для связи и быстрой записи.</p>
+              </div>
+            </div>
+
+            <div className="form-grid">
+              <label className="field">
+                <span className="field-label">Имя</span>
+                <input
+                  value={clientForm.fullName}
+                  onChange={(event) => setClientForm((current) => ({ ...current, fullName: event.target.value }))}
+                  placeholder="Как к вам обращаться"
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Телефон</span>
+                <input
+                  value={clientForm.phone}
+                  onChange={(event) => setClientForm((current) => ({ ...current, phone: event.target.value }))}
+                  placeholder="+7..."
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Email, необязательно</span>
+                <input
+                  value={clientForm.email}
+                  onChange={(event) => setClientForm((current) => ({ ...current, email: event.target.value }))}
+                  placeholder="name@example.com"
+                />
+              </label>
+              <div className="record-actions">
+                <button className="primary-button" disabled={isSubmitting} onClick={() => void handleUpdateProfile()}>
+                  Сохранить профиль
+                </button>
+                <button className="secondary-button" disabled={isSubmitting} onClick={() => openScreen("home")}>
+                  Назад
                 </button>
               </div>
+            </div>
+          </section>
+        ) : null}
 
-              {slotGroups.length === 0 ? (
-                <div className="empty-state">
-                  <strong>Свободных слотов пока нет</strong>
-                  <span>Попробуйте обновить список позже или свяжитесь с тренером вручную.</span>
+        {!isBusy && profile && screen === "records" ? (
+          <section className="panel web-booking-panel">
+            <div className="panel-header panel-header-compact panel-header-slim panel-header-top-actions">
+              <div className="panel-header-row">
+                <button className="back-link back-link-inline" disabled={isSubmitting} onClick={() => openScreen("home")}>
+                  ← Назад
+                </button>
+                <div className="panel-header-actions panel-header-actions-tight">
+                  <button
+                    className="secondary-button secondary-button-compact header-action-button"
+                    aria-label="Обновить записи"
+                    title="Обновить"
+                    disabled={isSubmitting}
+                    onClick={() => void loadBookingContext()}
+                  >
+                    Обновить
+                  </button>
                 </div>
-              ) : (
-                <div className="booking-groups">
-                  {slotGroups.map((group) => (
-                    <section className="slot-day slot-day-compact" key={group.dayKey}>
-                      <div className="slot-day-header">
-                        <h3 className="slot-day-title">{group.title.replace(",", " ·")}</h3>
-                      </div>
-                      <div className="time-grid">
-                        {group.items.map((slot) => (
-                          <button
-                            className="time-button"
-                            data-active={selectedSlotId === slot.id}
-                            key={slot.id}
-                            onClick={() => setSelectedSlotId(slot.id)}
-                          >
-                            {formatTime(slot.startAt)} - {formatTime(slot.endAt)}
-                          </button>
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                </div>
-              )}
+              </div>
+              <div className="panel-header-copy panel-header-copy-wide">
+                <h2 className="panel-title">Мои записи</h2>
+                <p className="panel-text">Здесь собраны актуальные тренировки и текущие статусы по ним.</p>
+              </div>
+            </div>
 
-              <div className="form-grid booking-form-grid web-booking-submit">
-                <label className="field">
-                  <span className="field-label">Комментарий, необязательно</span>
-                  <textarea
-                    value={comment}
-                    onChange={(event) => setComment(event.target.value)}
-                    placeholder="Например: первая тренировка, удобнее после 18:00"
-                  />
-                </label>
-                <button className="primary-button booking-submit-button" disabled={isSubmitting || !selectedSlotId} onClick={() => void handleRequestBooking()}>
-                  Отправить заявку
+            {upcomingRecords.length === 0 ? (
+              <div className="empty-state">
+                <strong>Пока нет актуальных записей</strong>
+                <span>Когда будете готовы, можно сразу вернуться к выбору времени.</span>
+                <button className="primary-button booking-submit-button" onClick={() => openScreen("booking")}>
+                  Перейти к записи
                 </button>
               </div>
-            </section>
-
-            <aside className="panel web-booking-panel">
-              <div className="panel-header">
-                <div>
-                  <h2 className="panel-title">Ваши данные</h2>
-                  <p className="panel-text">Сохранены только на этом устройстве.</p>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <label className="field">
-                  <span className="field-label">Имя</span>
-                  <input
-                    value={clientForm.fullName}
-                    onChange={(event) => setClientForm((current) => ({ ...current, fullName: event.target.value }))}
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Телефон</span>
-                  <input
-                    value={clientForm.phone}
-                    onChange={(event) => setClientForm((current) => ({ ...current, phone: event.target.value }))}
-                  />
-                </label>
-                <label className="field">
-                  <span className="field-label">Email</span>
-                  <input
-                    value={clientForm.email}
-                    onChange={(event) => setClientForm((current) => ({ ...current, email: event.target.value }))}
-                  />
-                </label>
-                <button className="secondary-button" disabled={isSubmitting} onClick={() => void handleUpdateProfile()}>
-                  Сохранить контакты
-                </button>
-              </div>
-
-              <section className="panel panel-subsection web-records-panel">
-                <div className="panel-header">
-                  <div>
-                    <h3 className="panel-title">Мои записи</h3>
-                    <p className="panel-text">Здесь появляются актуальные заявки и подтверждения.</p>
-                  </div>
-                </div>
-
-                {upcomingRecords.length === 0 ? (
-                  <div className="empty-state">
-                    <strong>Записей пока нет</strong>
-                    <span>После отправки заявки она появится здесь.</span>
-                  </div>
-                ) : (
-                  <div className="record-list">
-                    {upcomingRecords.map((item) => (
-                      <article className="record-card workout-card" key={item.bookingId}>
-                        <div className="workout-card__head">
-                          <div className="workout-card__summary">
-                            <div className="workout-card__top">
-                              <div className="workout-card__date">{formatDateTime(item.startAt)}</div>
-                            </div>
-                            <div className="workout-card__status" data-tone={getStatusTone(item)}>
-                              {getStatusLabel(item)}
-                            </div>
-                          </div>
+            ) : (
+              <div className="record-list">
+                {upcomingRecords.map((item) => (
+                  <article className="record-card workout-card" key={item.bookingId}>
+                    <div className="workout-card__head">
+                      <div className="workout-card__summary">
+                        <div className="workout-card__top">
+                          <div className="workout-card__date">{formatDateTime(item.startAt)}</div>
                         </div>
-                        {item.trainerComment ? <p className="workout-card__comment">{item.trainerComment}</p> : null}
-                        {item.bookingStatus === "CONFIRMED" && item.trainingStatus !== "CANCELLED" ? (
-                          <div className="workout-card__actions">
-                            <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
-                              Добавить в календарь
-                            </a>
-                          </div>
-                        ) : null}
-                        {item.hasTrainerProposal ? (
-                          <div className="workout-card__actions">
-                            <button className="action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleAcceptProposal(item.bookingId)}>
-                              Принять время
-                            </button>
-                            <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleDeclineProposal(item.bookingId)}>
-                              Отклонить
-                            </button>
-                          </div>
-                        ) : null}
-                        {item.canCancel && item.bookingStatus !== "CANCELLED" ? (
-                          <div className="workout-card__actions">
-                            <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleCancelRecord(item.bookingId)}>
-                              Отменить запись
-                            </button>
-                          </div>
-                        ) : null}
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </aside>
-          </div>
+                        <div className="workout-card__status" data-tone={getStatusTone(item)}>
+                          {getStatusLabel(item)}
+                        </div>
+                      </div>
+                    </div>
+                    {item.trainerComment ? <p className="workout-card__comment">{item.trainerComment}</p> : null}
+                    {item.bookingStatus === "CONFIRMED" && item.trainingStatus !== "CANCELLED" ? (
+                      <div className="workout-card__actions">
+                        <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
+                          Добавить в календарь
+                        </a>
+                      </div>
+                    ) : null}
+                    {item.hasTrainerProposal ? (
+                      <div className="workout-card__actions">
+                        <button className="action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleAcceptProposal(item.bookingId)}>
+                          Принять перенос
+                        </button>
+                        <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleDeclineProposal(item.bookingId)}>
+                          Отклонить
+                        </button>
+                      </div>
+                    ) : null}
+                    {item.canCancel && item.bookingStatus !== "CANCELLED" ? (
+                      <div className="workout-card__actions">
+                        <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleCancelRecord(item.bookingId)}>
+                          {item.isAwaitingTrainerDecision ? "Отменить заявку" : "Отменить"}
+                        </button>
+                      </div>
+                    ) : null}
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
       </div>
     </main>
