@@ -326,10 +326,10 @@ export function WebBookingPage() {
             <Image className="brand-logo" src="/assets/logo-mark.png" alt="Твой Бокс" width={52} height={52} priority />
             <div className="brand-copy">
               <div className="brand-title">
-                <span className="brand-title-main">Твой</span>
-                <span className="brand-title-accent">Бокс</span>
+                <span className="brand-title-main">ТВОЙ</span>
+                <span className="brand-title-accent">БОКС</span>
               </div>
-              <span className="brand-tagline">Запись на тренировку</span>
+              <span className="brand-tagline">Твой путь к силе и уверенности</span>
             </div>
           </div>
           {profile ? (
@@ -348,10 +348,11 @@ export function WebBookingPage() {
         <section className="hero-card web-booking-hero">
           <div className="trainer-hero-grid">
             <div className="trainer-hero-copy">
-              <p className="trainer-hero-eyebrow">персональная тренировка</p>
-              <h1 className="trainer-thought-title">Запишитесь из браузера, тренер подтвердит время</h1>
+              <p className="trainer-hero-eyebrow">ТВОЙ БОКС</p>
+              <h1 className="trainer-thought-title">Сила начинается не с удара</h1>
               <p className="trainer-thought-lead">
-                Выберите удобный слот, оставьте телефон для связи и отслеживайте статус заявки на этом устройстве.
+                Она начинается с уверенности в себе. Выберите удобный день и приходите на тренировку - без давления и
+                подготовки.
               </p>
             </div>
             <div className="trainer-frame web-booking-photo">
