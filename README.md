@@ -45,6 +45,8 @@ GitHub Actions secrets:
 /opt/stack/tvoy-box-bot-deploy/shared/.secrets/google-service-account.json
 ```
 
+Для резервного web-кабинета тренера в `.env.server` также нужен `WEB_TRAINER_LOGIN_SECRET`; значение не хранится в репозитории.
+
 Проверка после деплоя:
 
 ```bash

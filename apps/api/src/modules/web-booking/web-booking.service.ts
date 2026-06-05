@@ -1,10 +1,12 @@
 import { BadRequestException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { BookingSource } from "@prisma/client";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
+import { AppConfigService } from "../../config/app-config.service";
 import { PrismaService } from "../../prisma/prisma.service";
 import { BookingsService } from "../bookings/bookings.service";
 import { ClientsService, ClientDto } from "../clients/clients.service";
+import { MiniAppAuthService } from "../mini-app/mini-app-auth.service";
 import { SlotsService } from "../slots/slots.service";
 
 const WEB_SESSION_TTL_DAYS = 180;
@@ -19,7 +21,9 @@ export interface WebClientSessionPayload {
 export class WebBookingService {
   constructor(
     private readonly prismaService: PrismaService,
+    private readonly appConfigService: AppConfigService,
     private readonly clientsService: ClientsService,
+    private readonly miniAppAuthService: MiniAppAuthService,
     private readonly slotsService: SlotsService,
     private readonly bookingsService: BookingsService,
   ) {}
@@ -103,6 +107,21 @@ export class WebBookingService {
     return this.bookingsService.getClientTrainingCalendarFile(session.client.telegramId, bookingId);
   }
 
+  createTrainerSession(input: { secret: string }) {
+    const configuredSecret = this.appConfigService.values.webTrainerLoginSecret.trim();
+    const providedSecret = input.secret.trim();
+
+    if (!configuredSecret) {
+      throw new UnauthorizedException("Web trainer login is not configured");
+    }
+
+    if (!this.isEqualSecret(providedSecret, configuredSecret)) {
+      throw new UnauthorizedException("Invalid trainer secret");
+    }
+
+    return this.miniAppAuthService.createTrainerWebSession();
+  }
+
   private async getSessionByToken(token: string) {
     const rawToken = token.trim();
     if (!rawToken) {
@@ -136,6 +155,12 @@ export class WebBookingService {
 
   private hashToken(token: string): string {
     return createHash("sha256").update(token).digest("hex");
+  }
+
+  private isEqualSecret(providedSecret: string, configuredSecret: string): boolean {
+    const providedHash = createHash("sha256").update(providedSecret).digest();
+    const configuredHash = createHash("sha256").update(configuredSecret).digest();
+    return timingSafeEqual(providedHash, configuredHash);
   }
 
   private toClientDto(client: {

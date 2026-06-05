@@ -99,6 +99,7 @@ export interface ApiRuntimeConfig {
   miniAppAuthSecret: string;
   miniAppAllowedOrigins: string[];
   miniAppEnableDevLogin: boolean;
+  webTrainerLoginSecret: string;
 }
 
 export function getApiRuntimeConfig(): ApiRuntimeConfig {
@@ -131,6 +132,7 @@ export function getApiRuntimeConfig(): ApiRuntimeConfig {
     miniAppAuthSecret: getOptionalEnv("MINI_APP_AUTH_SECRET", telegramBotToken),
     miniAppAllowedOrigins: getStringListEnv("MINI_APP_ALLOWED_ORIGINS", defaultMiniAppOrigins),
     miniAppEnableDevLogin: getOptionalEnv("MINI_APP_ENABLE_DEV_LOGIN", "false").toLowerCase() === "true",
+    webTrainerLoginSecret: getOptionalEnv("WEB_TRAINER_LOGIN_SECRET", ""),
   };
 }
 

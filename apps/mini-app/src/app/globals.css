@@ -1904,6 +1904,75 @@ a {
   margin-top: 0;
 }
 
+.web-trainer-page {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, rgba(247, 249, 252, 0.96), rgba(236, 241, 247, 0.92)),
+    var(--app-bg);
+  color: var(--text-main);
+}
+
+.web-trainer-page--ready {
+  background: var(--app-bg);
+}
+
+.web-trainer-login {
+  width: min(100% - 32px, 460px);
+  margin: 0 auto;
+  padding: 72px 0 40px;
+  display: grid;
+  gap: 16px;
+}
+
+.web-trainer-login h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+.web-trainer-login p {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.web-trainer-login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.web-trainer-message {
+  margin: 0;
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.web-trainer-login-button {
+  width: 100%;
+}
+
+.web-trainer-session-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.web-trainer-session-bar strong {
+  display: block;
+  font-size: 15px;
+}
+
 @media (max-width: 980px) {
   .hero-grid,
   .content-grid {
@@ -1930,6 +1999,19 @@ a {
 }
 
 @media (max-width: 720px) {
+  .web-trainer-login {
+    width: min(100% - 24px, 460px);
+    padding-top: 48px;
+  }
+
+  .web-trainer-login h1 {
+    font-size: 26px;
+  }
+
+  .web-trainer-session-bar {
+    padding: 9px 10px;
+  }
+
   .mini-app-page {
     padding: 6px 6px 12px;
   }

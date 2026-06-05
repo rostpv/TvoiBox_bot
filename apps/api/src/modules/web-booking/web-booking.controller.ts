@@ -8,6 +8,10 @@ interface CreateSessionBody {
   email?: string | null;
 }
 
+interface CreateTrainerSessionBody {
+  secret?: string;
+}
+
 interface UpdateProfileBody extends CreateSessionBody {}
 
 interface RequestBookingBody {
@@ -49,6 +53,17 @@ export class WebBookingController {
       token: result.token,
       profile: result.client,
     };
+  }
+
+  @Post("trainer/session")
+  async createTrainerSession(@Body() body: CreateTrainerSessionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.createTrainerSession({
+      secret: body.secret ?? "",
+    });
   }
 
   @Get("client/me")

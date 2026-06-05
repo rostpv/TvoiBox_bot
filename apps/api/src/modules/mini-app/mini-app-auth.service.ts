@@ -87,6 +87,22 @@ export class MiniAppAuthService {
     };
   }
 
+  createTrainerWebSession(): MiniAppSessionResponse {
+    const session = this.createSessionPayload({
+      telegramId: this.appConfigService.values.trainerTelegramId,
+      username: null,
+      firstName: "Тренер",
+      lastName: null,
+      photoUrl: null,
+    });
+
+    return {
+      status: "ok",
+      token: this.signSession(session),
+      session,
+    };
+  }
+
   async getMe(session: MiniAppSessionPayload): Promise<MiniAppMeResponse> {
     const profile = await this.clientsService.findByTelegramId(session.telegramId);
 
