@@ -7,12 +7,14 @@ Production-проект Telegram-бота и Telegram Mini App для запис
 - Бот: `@TvoyBox_bot`
 - API: `https://api.tvoybox.ru`
 - Mini App: `https://app.tvoybox.ru`
+- Web-запись: `https://app.tvoybox.ru/booking`
+- Web-кабинет тренера: `https://app.tvoybox.ru/trainer`
 - GitHub: `https://github.com/rostpv/TvoiBox_bot`
 - Рабочая ветка для production-деплоя: `main`
 - VPS: `155.212.137.86`
 - Deploy root: `/opt/stack/tvoy-box-bot-deploy`
 
-Все production-деплои идут из `main` через GitHub Actions.
+Все production-деплои идут из `main` через GitHub Actions. Изменения только в `docs/**` и корневых `*.md` production deploy не запускают.
 
 Текущий статус передачи: завершена, см. `docs/handover-progress.md`.
 
@@ -20,7 +22,7 @@ Production-проект Telegram-бота и Telegram Mini App для запис
 
 - `apps/api` - backend API на NestJS.
 - `apps/bot` - Telegram-бот на grammY.
-- `apps/mini-app` - Telegram Mini App на Next.js.
+- `apps/mini-app` - Telegram Mini App, web-запись и web-кабинет тренера на Next.js.
 - `packages/*` - общие типы, конфигурация, логирование и утилиты.
 - `deploy/compose.server.yml` - production Docker Compose.
 - `scripts/deploy/*` - серверные deploy-скрипты.
@@ -77,9 +79,11 @@ corepack pnpm dev:mini-app
 ## Важные документы
 
 - `docs/handover-progress.md` - итоговый прогресс передачи проекта новому владельцу.
+- `docs/codex-project-context.md` - стартовый контекст для нового Codex/разработчика.
 - `docs/production-ops-runbook.md` - эксплуатация production.
 - `docs/owner-production-check.md` - короткий чек-лист проверки владельцем.
 - `docs/post-handover-backlog.md` - выполненные после передачи задачи и будущий backlog.
+- `docs/maintenance-log.md` - лог технической очистки и обслуживания.
 
 ## Секреты
 
