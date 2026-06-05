@@ -23,6 +23,8 @@
 - Backup cron: `/etc/cron.d/tvoy-box-postgres-backup`
 - API: `https://api.tvoybox.ru`
 - Mini app: `https://app.tvoybox.ru`
+- Web-запись: `https://app.tvoybox.ru/booking`
+- Web-кабинет тренера: `https://app.tvoybox.ru/trainer`
 - Healthcheck: `https://api.tvoybox.ru/health`
 - Google account владельца: `rostpv@gmail.com`
 - Google Cloud project: `TvoyBoxBot`
@@ -89,12 +91,14 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFRO1JbjiFoyNF+CtJtwTyA3MMdZD4i2Zn784zyplsNB
 ```bash
 curl -fsSL https://api.tvoybox.ru/health
 curl -I -L https://app.tvoybox.ru/
+curl -I -L https://app.tvoybox.ru/booking
+curl -I -L https://app.tvoybox.ru/trainer
 ```
 
 Ожидаемо:
 
 - API возвращает JSON со `status: ok`.
-- Mini app возвращает `HTTP/1.1 200 OK`.
+- Mini app, web-запись и web-кабинет возвращают `HTTP/1.1 200 OK`.
 
 ### Проверить контейнеры на VPS
 
@@ -247,6 +251,46 @@ docker compose --env-file .env.server -f deploy/compose.server.yml logs --tail=3
 
 ```bash
 docker compose --env-file .env.server -f deploy/compose.server.yml restart mini-app
+```
+
+## Если web-запись или web-кабинет тренера не открываются
+
+1. Проверить публичные URL:
+
+```bash
+curl -I -L https://app.tvoybox.ru/booking
+curl -I -L https://app.tvoybox.ru/trainer
+```
+
+2. Проверить API:
+
+```bash
+curl -fsSL https://api.tvoybox.ru/health
+```
+
+3. Проверить, что mini-app и api контейнеры работают:
+
+```bash
+docker compose --env-file .env.server -f deploy/compose.server.yml ps mini-app api
+```
+
+4. Проверить логи:
+
+```bash
+docker compose --env-file .env.server -f deploy/compose.server.yml logs --tail=300 mini-app
+docker compose --env-file .env.server -f deploy/compose.server.yml logs --tail=300 api
+```
+
+5. Если открывается `/trainer`, но вход не принимает секрет, проверить наличие переменной в shared env, не выводя значение в чат:
+
+```bash
+grep -E '^WEB_TRAINER_LOGIN_SECRET=' /opt/stack/tvoy-box-bot-deploy/shared/.env.server >/dev/null && echo 'WEB_TRAINER_LOGIN_SECRET is set'
+```
+
+Если переменной нет, добавить её в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`, затем перезапустить API:
+
+```bash
+docker compose --env-file .env.server -f deploy/compose.server.yml restart api
 ```
 
 ## Если API или база не работают

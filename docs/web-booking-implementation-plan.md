@@ -432,15 +432,15 @@
 
 Задачи:
 
-- [ ] Обновить `README.md`.
-- [ ] Обновить `docs/production-ops-runbook.md`.
-- [ ] Обновить `docs/emergency-support-runbook.md`.
-- [ ] Обновить `docs/post-handover-backlog.md`.
-- [ ] Добавить итоговые production-проверки.
-- [ ] Зафиксировать URL web-записи.
-- [ ] Зафиксировать URL web-кабинета тренера.
-- [ ] Зафиксировать список новых API endpoints.
-- [ ] Зафиксировать изменения в модели базы.
+- [x] Обновить `README.md`.
+- [x] Обновить `docs/production-ops-runbook.md`.
+- [x] Обновить `docs/emergency-support-runbook.md`.
+- [x] Обновить `docs/post-handover-backlog.md`.
+- [x] Добавить итоговые production-проверки.
+- [x] Зафиксировать URL web-записи.
+- [x] Зафиксировать URL web-кабинета тренера.
+- [x] Зафиксировать список новых API endpoints.
+- [x] Зафиксировать изменения в модели базы.
 
 Результат шага:
 
@@ -451,6 +451,9 @@
 Лог:
 
 - 2026-06-05: этап запланирован, не начат.
+- 2026-06-05: README и production runbook обновлены: добавлен `WEB_TRAINER_LOGIN_SECRET`, описано применение Prisma-схемы через deploy `migrate` service.
+- 2026-06-05: emergency runbook обновлён: добавлены URL `/booking` и `/trainer`, быстрые curl-проверки и диагностика web-записи/web-кабинета тренера.
+- 2026-06-05: в плане зафиксированы новые API endpoints `/web/client/*`, `/web/trainer/session`, изменения модели `Client`, `Booking`, `WebClientSession`, а также URL `https://app.tvoybox.ru/booking` и `https://app.tvoybox.ru/trainer`.
 
 ## Риски и ограничения
 
