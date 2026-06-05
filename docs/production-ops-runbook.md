@@ -42,6 +42,7 @@ docker compose --env-file .env.server -f deploy/compose.server.yml ps
 
 Deploy запускается через GitHub Actions при push в `main`.
 Изменения только в `docs/**` или корневых `*.md` не запускают production deploy.
+Во время deploy серверный скрипт запускает `migrate` service из `deploy/compose.server.yml`, который применяет Prisma-схему командой `prisma db push --schema prisma/schema.prisma`.
 
 Workflow:
 

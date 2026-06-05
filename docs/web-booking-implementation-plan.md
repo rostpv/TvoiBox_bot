@@ -188,6 +188,8 @@
 - 2026-06-05: Google Calendar получил поля `Источник` и `Email`; клиентские Telegram-уведомления для web-заявок пропускаются, тренерское уведомление принимает source/email.
 - 2026-06-05: проверки: `prisma validate` с временным `DATABASE_URL` прошёл, `prisma generate` прошёл, `corepack pnpm --filter @tvoy-box/api typecheck` прошёл, общий `corepack pnpm typecheck` прошёл. Локальный `prisma db push` и runtime-регрессия Telegram-заявки ещё не запускались.
 - 2026-06-05: повторная проверка после изменений тренерского UI: общий `corepack pnpm typecheck` прошёл.
+- 2026-06-05: после добавления web-кабинета тренера исправлена регистрация `AppConfigService` в `WebBookingModule`; `corepack pnpm --filter @tvoy-box/api typecheck` и `corepack pnpm --filter @tvoy-box/api build` прошли.
+- 2026-06-05: короткий старт собранного API с временными env прошёл до инициализации Nest-модулей: `WebBookingModule` и routes `/web/client/*`, `/web/trainer/session` смонтировались. Дальше старт ожидаемо остановился на `Can't reach database server at localhost:5432`, потому что локальный Postgres не запущен.
 
 ## Шаг 4: сделать web-страницу записи
 
@@ -424,6 +426,7 @@
 - 2026-06-05: этап запланирован, не начат.
 - 2026-06-05: `.env.example` и `.env.server.example` обновлены под `WEB_TRAINER_LOGIN_SECRET`; реальный production secret нужно добавить вручную в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server` перед деплоем.
 - 2026-06-05: локальный `prisma db push` не запускался: Docker Desktop установлен, но daemon недоступен из текущей сессии. Нужно повторить после запуска Docker Desktop или при наличии доступа к VPS.
+- 2026-06-05: проверено, что production deploy script `scripts/deploy/deploy-server.sh` уже запускает `migrate` service, а `deploy/compose.server.yml` выполняет `prisma db push --schema prisma/schema.prisma`. Для пустой production БД это подходящий путь применения текущей схемы, но перед push в `main` всё равно нужно добавить `WEB_TRAINER_LOGIN_SECRET` в `.env.server`.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
