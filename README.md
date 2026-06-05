@@ -55,6 +55,14 @@ curl https://app.tvoybox.ru/mini-api/health
 curl -I https://app.tvoybox.ru/
 ```
 
+Перед production-деплоем web-записи на доступном API/БД контуре запустить ручной smoke:
+
+```bash
+corepack pnpm qa:web-booking
+```
+
+Скрипту нужны `API_BASE_URL`, `TRAINER_TELEGRAM_ID` или `ADMIN_TELEGRAM_ID`, `WEB_TRAINER_LOGIN_SECRET`. Опционально можно задать `WEB_BOOKING_QA_TELEGRAM_CLIENT_ID` для тестового Telegram-клиента. Скрипт создаёт web-заявку, проверяет конфликты Web/Web и Telegram/Web, подтверждает запись через web-кабинет тренера, затем отменяет её как cleanup.
+
 ## Локальный запуск для разработки
 
 ```bash

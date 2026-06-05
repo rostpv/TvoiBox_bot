@@ -443,6 +443,7 @@
 - 2026-06-05: локальный `prisma db push` не запускался: Docker Desktop установлен, но daemon недоступен из текущей сессии. Нужно повторить после запуска Docker Desktop или при наличии доступа к VPS.
 - 2026-06-05: проверено, что production deploy script `scripts/deploy/deploy-server.sh` уже запускает `migrate` service, а `deploy/compose.server.yml` выполняет `prisma db push --schema prisma/schema.prisma`. Для пустой production БД это подходящий путь применения текущей схемы, но перед push в `main` всё равно нужно добавить `WEB_TRAINER_LOGIN_SECRET` в `.env.server`.
 - 2026-06-05: подготовлен ручной smoke/QA-скрипт `corepack pnpm qa:web-booking`; перед production deploy его нужно выполнить на доступном API/БД контуре вместе с проверкой Telegram mini app.
+- 2026-06-05: README и production runbook дополнены инструкцией запуска `corepack pnpm qa:web-booking`, списком нужных env и перечнем проверяемых сценариев.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
