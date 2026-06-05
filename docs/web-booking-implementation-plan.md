@@ -2,7 +2,7 @@
 
 Дата создания: 2026-06-05.
 
-Статус: шаги 1-2 завершены, кодовая основа шагов 3-6 подготовлена локально; миграция БД, runtime-регрессия Telegram flow, E2E-проверка trainer web login и production deploy ещё не выполнялись.
+Статус: код web-записи и web-кабинета тренера подготовлен на безопасной ветке `codex/web-booking-foundation`; локальные `typecheck`, production build mini app и smoke `qa:web-booking` прошли. Production secret добавлен и проверен на VPS, production health до деплоя зелёный. Deploy в `main`, проверка web-страниц в production, реальный Google Calendar и полный Telegram regression ещё не выполнялись.
 
 Цель: добавить мобильную web-версию записи вне Telegram, чтобы клиенты могли записываться из обычного браузера, а все заявки синхронизировались с текущей mini app, ботом, тренерским контуром, Google Calendar и общей базой. Сразу предусмотреть web-кабинет тренера как резервный канал на случай, если Telegram недоступен.
 
@@ -59,8 +59,8 @@
 
 - [x] Шаг 1: обследовать текущую архитектуру mini app, API, booking flow и модели базы.
 - [x] Шаг 2: спроектировать web-клиент и простую авторизацию без SMS.
-- [ ] Шаг 3: подготовить изменения базы и API.
-- [ ] Шаг 4: сделать web-страницу записи.
+- [x] Шаг 3: подготовить изменения базы и API.
+- [x] Шаг 4: сделать web-страницу записи.
 - [ ] Шаг 5: связать web-заявки с текущим тренерским контуром.
 - [ ] Шаг 6: спроектировать и реализовать web-кабинет тренера.
 - [ ] Шаг 7: обновить Google Calendar, `.ics` и уведомления для web-клиентов.
@@ -69,7 +69,7 @@
 - [ ] Шаг 10: подготовить production deploy.
 - [ ] Шаг 11: обновить документацию и закрыть этап.
 
-Итого: 2/11.
+Итого: 4/11.
 
 ## Шаг 1: обследовать текущую архитектуру
 
@@ -426,7 +426,7 @@
 - [x] Проверить `.env.server.example`, если появились новые переменные.
 - [x] Проверить production secrets, если появились новые secrets.
 - [x] Проверить миграцию базы на тестовом/локальном контуре.
-- [ ] Подготовить commit с кодом.
+- [x] Подготовить commit с кодом.
 - [ ] Запустить deploy через GitHub Actions.
 - [ ] Проверить API health.
 - [ ] Проверить web-запись в production.
@@ -450,6 +450,8 @@
 - 2026-06-05: README и production runbook дополнены инструкцией запуска `corepack pnpm qa:web-booking`, списком нужных env и перечнем проверяемых сценариев.
 - 2026-06-05: локально выполнен `corepack pnpm qa:web-booking` на API `http://localhost:3000` и Docker Postgres; Google Calendar был в mock-режиме, поэтому production deploy всё ещё требует отдельной проверки реального календаря.
 - 2026-06-05: на VPS проверено наличие `WEB_TRAINER_LOGIN_SECRET` в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`: строка одна, значение непустое, права файла `600`. Значение секрета не выводилось и не сохранялось в репозитории.
+- 2026-06-05: финальный локальный преддеплойный аудит прошёл: `corepack pnpm --filter @tvoy-box/api typecheck`, `corepack pnpm --filter @tvoy-box/mini-app build`, повторный `corepack pnpm typecheck` и `node --check scripts\qa\web-booking-flow-check.mjs` завершились успешно. Первый параллельный запуск общего typecheck пересёкся с `next build` и временно упал на пересоздании `.next/types`; последовательный повтор прошёл.
+- 2026-06-05: production до деплоя проверен без изменений: `https://api.tvoybox.ru/health` и `https://app.tvoybox.ru` вернули `200`; контейнеры `api`, `bot`, `mini-app`, `postgres` на VPS в состоянии `running`, API/mini-app/Postgres healthy. Текущий production release указывает на `/opt/stack/tvoy-box-bot-deploy/releases/993eebb70dc0f979af7141c78cae0c28a8536485`; новый web-код ещё не деплоился.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
