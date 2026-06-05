@@ -477,10 +477,6 @@ export class ClientsService {
     const phoneNormalized = this.normalizePhoneForIdentity(phone);
     const email = input.email?.trim() || null;
 
-    if (!fullName) {
-      throw new BadRequestException("fullName is required");
-    }
-
     if (!phone) {
       throw new BadRequestException("phone is required");
     }
@@ -493,11 +489,15 @@ export class ClientsService {
       where: { phoneNormalized },
     });
 
+    if (!existingClient && !fullName) {
+      throw new BadRequestException("fullName is required");
+    }
+
     if (existingClient) {
       const updatedClient = await this.prismaService.client.update({
         where: { id: existingClient.id },
         data: {
-          fullName,
+          fullName: fullName || existingClient.fullName,
           phone,
           phoneNormalized,
           email: email ?? existingClient.email,

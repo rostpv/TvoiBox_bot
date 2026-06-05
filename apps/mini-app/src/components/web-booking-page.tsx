@@ -133,6 +133,8 @@ export function WebBookingPage() {
     .sort((left, right) => left.startAt.localeCompare(right.startAt));
 
   useEffect(() => {
+    (window as Window & { __TVOY_BOX_CLIENT_BOOTED?: boolean }).__TVOY_BOX_CLIENT_BOOTED = true;
+
     const token = window.localStorage.getItem(SESSION_STORAGE_KEY);
     if (!token) {
       setIsBusy(false);
@@ -170,21 +172,27 @@ export function WebBookingPage() {
     setRecords(nextRecords.items);
   };
 
-  const handleStartSession = async () => {
+  const handleStartSession = async (mode: "profile" | "phone-only" = "profile") => {
     setIsSubmitting(true);
     setMessage(null);
 
     try {
       const response = await api.createSession({
-        fullName: clientForm.fullName,
+        fullName: mode === "phone-only" ? "" : clientForm.fullName,
         phone: clientForm.phone,
-        email: clientForm.email || null,
+        email: mode === "phone-only" ? null : clientForm.email || null,
       });
       window.localStorage.setItem(SESSION_STORAGE_KEY, response.token);
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
       await loadBookingContext();
-      setMessage({ tone: "success", text: "Данные сохранены. Можно выбрать время тренировки." });
+      setMessage({
+        tone: "success",
+        text:
+          mode === "phone-only"
+            ? "Данные найдены. Можно выбрать время тренировки."
+            : "Данные сохранены. Можно выбрать время тренировки.",
+      });
     } catch (error) {
       const normalizedError = error as Error;
       setMessage({ tone: "error", text: normalizedError.message || "Не удалось сохранить данные." });
@@ -402,6 +410,13 @@ export function WebBookingPage() {
               </label>
               <button className="primary-button" disabled={isSubmitting} onClick={() => void handleStartSession()}>
                 Продолжить
+              </button>
+              <button
+                className="secondary-button"
+                disabled={isSubmitting || !clientForm.phone.trim()}
+                onClick={() => void handleStartSession("phone-only")}
+              >
+                Найти по телефону
               </button>
             </div>
           </section>

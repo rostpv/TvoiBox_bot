@@ -138,7 +138,7 @@
 - URL web-записи: `https://app.tvoybox.ru/booking`. Это не требует нового DNS и Caddy route, потому что домен mini app уже работает.
 - URL web-кабинета тренера: `https://app.tvoybox.ru/trainer`. Отдельный `trainer.tvoybox.ru` оставить на потом, если понадобится вынести кабинет отдельно.
 - Первый экран web-записи сразу показывает рабочую форму и слоты; отдельную landing page не делаем. Допускается короткий текст над формой: что это запись на персональную тренировку и тренер подтвердит заявку.
-- Обязательные поля клиента: имя и телефон. Email и комментарий необязательны.
+- Обязательные поля нового клиента: имя и телефон. Для повторного входа с другого устройства существующему web-клиенту достаточно телефона. Email и комментарий необязательны.
 - Клиент может редактировать сохранённые данные перед отправкой новой заявки.
 - Web-клиент видит свои будущие записи, если на устройстве есть web-session token.
 - `.ics` для web-клиента показывать ссылкой/кнопкой в web-интерфейсе у подтверждённой тренировки.
@@ -160,6 +160,7 @@
 
 - 2026-06-05: принято решение делать простую авторизацию без SMS.
 - 2026-06-05: выбраны URL `/booking` и `/trainer` на существующем `app.tvoybox.ru`, обязательные поля имя+телефон, web-session token на устройстве, source заявки `telegram/web`, простой trainer web login через secret из окружения.
+- 2026-06-05: уточнено поведение повторного входа с другого устройства: если телефон уже есть в базе, web-клиент может получить новую session без повторного ввода имени; существующие имя/email сохраняются.
 
 ## Шаг 3: подготовить базу и API
 
@@ -184,6 +185,7 @@
 
 - 2026-06-05: этап запланирован, не начат.
 - 2026-06-05: подготовлена backend-основа web-клиента: `Client.phoneNormalized`, `Client.email`, `WebClientSession`, `Booking.source`, API module `/web`, создание web-сессии, чтение/обновление web-профиля, получение слотов, создание web-заявки, список записей и `.ics` по web-session token.
+- 2026-06-05: `upsertWebClientProfile` теперь поддерживает phone-only session для существующего web-клиента: имя обязательно только при создании нового клиента, а при найденном телефоне сохраняется старое имя.
 - 2026-06-05: `BookingsService.createBookingRequest` разделён на Telegram-обёртку и общий `createBookingRequestForClient` по `clientId`, чтобы Telegram mini app, бот и Web использовали одну бизнес-логику слотов и заявок.
 - 2026-06-05: Google Calendar получил поля `Источник` и `Email`; клиентские Telegram-уведомления для web-заявок пропускаются, тренерское уведомление принимает source/email.
 - 2026-06-05: проверки: `prisma validate` с временным `DATABASE_URL` прошёл, `prisma generate` прошёл, `corepack pnpm --filter @tvoy-box/api typecheck` прошёл, общий `corepack pnpm typecheck` прошёл. Локальный `prisma db push` и runtime-регрессия Telegram-заявки ещё не запускались.
@@ -219,6 +221,9 @@
 - 2026-06-05: этап запланирован, не начат.
 - 2026-06-05: добавлена frontend-страница `apps/mini-app/src/app/booking/page.tsx`, компонент `apps/mini-app/src/components/web-booking-page.tsx` и API-клиент `apps/mini-app/src/lib/web-booking-api.ts`.
 - 2026-06-05: реализованы первый вход по имени/телефону/email, сохранение web-session token в `localStorage`, повторная загрузка профиля, список слотов, отправка заявки, список будущих записей и ссылка `.ics` у подтверждённых тренировок.
+- 2026-06-05: на странице `/booking` добавлено действие `Найти по телефону` для повторного входа с другого устройства без SMS/пароля; если телефон найден, профиль подтягивается и сохраняется новая session на устройстве.
+- 2026-06-05: `/booking` помечает web-клиент как загруженный для общего layout-watchdog, чтобы Telegram fallback не заменял web-загрузчик текстом про mini app.
+- 2026-06-05: браузерная проверка `http://127.0.0.1:3001/booking` после ожидания дольше 8 секунд прошла: кнопки `Продолжить` и `Найти по телефону` видны, Telegram fallback не появился, ошибок консоли нет.
 - 2026-06-05: локальная визуальная проверка `http://localhost:3001/booking` прошла: страница открывается без Telegram WebApp API, форма видна, ошибок консоли нет. `corepack pnpm --filter @tvoy-box/mini-app build` прошёл, route `/booking` вошёл в production build. End-to-end отправка заявки ещё не проверена, потому что локальный API/DB контур не поднимался.
 - 2026-06-05: повторный `corepack pnpm --filter @tvoy-box/mini-app build` прошёл после правок тренерского UI, route `/booking` остаётся в production build.
 
@@ -302,6 +307,8 @@
 - 2026-06-05: добавлен `POST /web/trainer/session`; вход проверяет секрет `WEB_TRAINER_LOGIN_SECRET` из env и выдаёт обычный trainer session token, совместимый с текущими `/mini-app/trainer/*` endpoints.
 - 2026-06-05: добавлена страница `apps/mini-app/src/app/trainer/page.tsx` и компонент `apps/mini-app/src/components/web-trainer-page.tsx`: форма входа, сохранение trainer token в `localStorage`, повторное открытие сессии и выход.
 - 2026-06-05: web-кабинет переиспользует существующий `TrainerMiniApp`, поэтому заявки, тренировки, слоты, настройки, blacklist, no-slot requests, CSV export и calendar download идут через ту же бизнес-логику, что Telegram mini app.
+- 2026-06-05: `/trainer` помечает web-клиент как загруженный для общего layout-watchdog, чтобы резервный кабинет не зависел от Telegram bootstrap.
+- 2026-06-05: браузерная проверка `http://127.0.0.1:3001/trainer` после ожидания дольше 8 секунд прошла: форма входа видна, Telegram fallback не появился, ошибок консоли нет.
 - 2026-06-05: проверки: `corepack pnpm typecheck` прошёл, `corepack pnpm --filter @tvoy-box/mini-app build` прошёл, route `/trainer` вошёл в production build. Локальная браузерная проверка `http://localhost:3001/trainer` прошла: форма входа видна, ошибок консоли нет.
 - 2026-06-05: перед production deploy нужно добавить `WEB_TRAINER_LOGIN_SECRET` в `/opt/stack/tvoy-box-bot-deploy/shared/.env.server`; секрет не хранится в репозитории.
 - 2026-06-05: `.env.example` и `.env.server.example` дополнены переменной `WEB_TRAINER_LOGIN_SECRET` без реального значения.
@@ -402,6 +409,7 @@
 
 - 2026-06-05: этап запланирован, не начат.
 - 2026-06-05: добавлен ручной QA-скрипт `corepack pnpm qa:web-booking` для проверки основного web-сценария: первый вход клиента, создание заявки, видимость заявки и email/source в тренерском контуре, подтверждение тренером и появление подтверждённой записи у web-клиента.
+- 2026-06-05: QA-скрипт дополнен проверкой phone-only session: повторный вход по телефону должен подтянуть того же web-клиента и сохранить прежние имя/email.
 
 ## Шаг 10: подготовить production deploy
 

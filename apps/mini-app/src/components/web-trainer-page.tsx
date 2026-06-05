@@ -25,6 +25,8 @@ export function WebTrainerPage() {
   const [isBusy, setIsBusy] = useState(false);
 
   useEffect(() => {
+    (window as Window & { __TVOY_BOX_CLIENT_BOOTED?: boolean }).__TVOY_BOX_CLIENT_BOOTED = true;
+
     const savedToken = window.localStorage.getItem(WEB_TRAINER_TOKEN_KEY);
 
     if (!savedToken) {

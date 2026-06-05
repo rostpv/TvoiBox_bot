@@ -176,16 +176,35 @@ async function main() {
   await openSlot(apiBaseUrl, trainerTelegramId, slotStartAt);
 
   const clientPhoneSuffix = String(Date.now()).slice(-8);
+  const firstClientPhone =
+    `+7 900 ${clientPhoneSuffix.slice(0, 3)} ${clientPhoneSuffix.slice(3, 5)} ${clientPhoneSuffix.slice(5, 7)}`;
+  const secondClientPhone =
+    `+7 901 ${clientPhoneSuffix.slice(0, 3)} ${clientPhoneSuffix.slice(3, 5)} ${clientPhoneSuffix.slice(5, 7)}`;
   const firstClient = await createWebClientSession(apiBaseUrl, {
     fullName: "Web QA Client",
-    phone: `+7 900 ${clientPhoneSuffix.slice(0, 3)} ${clientPhoneSuffix.slice(3, 5)} ${clientPhoneSuffix.slice(5, 7)}`,
+    phone: firstClientPhone,
     email: "web-qa@example.com",
+  });
+  const firstClientPhoneOnlySession = await createWebClientSession(apiBaseUrl, {
+    fullName: "",
+    phone: firstClientPhone,
+    email: null,
   });
   const secondClient = await createWebClientSession(apiBaseUrl, {
     fullName: "Web QA Conflict Client",
-    phone: `+7 901 ${clientPhoneSuffix.slice(0, 3)} ${clientPhoneSuffix.slice(3, 5)} ${clientPhoneSuffix.slice(5, 7)}`,
+    phone: secondClientPhone,
     email: null,
   });
+
+  if (firstClientPhoneOnlySession.profile.id !== firstClient.profile.id) {
+    throw new Error("Phone-only web session did not resolve the existing client");
+  }
+  if (firstClientPhoneOnlySession.profile.fullName !== "Web QA Client") {
+    throw new Error("Phone-only web session did not preserve the existing client name");
+  }
+  if (firstClientPhoneOnlySession.profile.email !== "web-qa@example.com") {
+    throw new Error("Phone-only web session did not preserve the existing client email");
+  }
 
   const slot = await findSlotByStart(apiBaseUrl, firstClient.token, slotStartAt);
   if (!slot) {
