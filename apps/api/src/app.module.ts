@@ -10,6 +10,7 @@ import { NoSlotRequestsModule } from "./modules/no-slot-requests/no-slot-request
 import { SlotsModule } from "./modules/slots/slots.module";
 import { TelegramNotificationsModule } from "./modules/telegram-notifications/telegram-notifications.module";
 import { TrainerSettingsModule } from "./modules/trainer-settings/trainer-settings.module";
+import { WebBookingModule } from "./modules/web-booking/web-booking.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 @Module({
@@ -24,6 +25,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     GoogleCalendarModule,
     TelegramNotificationsModule,
     TrainerSettingsModule,
+    WebBookingModule,
   ],
   providers: [AppConfigService],
 })

@@ -34,6 +34,12 @@ export interface GetAvailableSlotsInput {
   to?: string;
 }
 
+export interface GetAvailableSlotsForClientInput {
+  clientId: string;
+  from?: string;
+  to?: string;
+}
+
 export interface GetTrainerSlotsInput {
   trainerTelegramId: string;
   from: string;
@@ -380,6 +386,31 @@ export class SlotsService {
 
     if (!client) {
       throw new BadRequestException("Client is not registered");
+    }
+
+    return this.getAvailableSlotsForClient({
+      clientId: client.id,
+      from: input.from,
+      to: input.to,
+    });
+  }
+
+  async getAvailableSlotsForClient(input: GetAvailableSlotsForClientInput): Promise<SlotDto[]> {
+    const clientId = input.clientId.trim();
+    if (!clientId) {
+      throw new BadRequestException("clientId is required");
+    }
+
+    const client = await this.prismaService.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      throw new BadRequestException("Client is not registered");
+    }
+
+    if (client.isBlacklisted) {
+      throw new ForbiddenException("Client is blacklisted");
     }
 
     const now = new Date();

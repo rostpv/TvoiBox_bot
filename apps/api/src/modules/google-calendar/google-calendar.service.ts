@@ -29,8 +29,10 @@ interface CreateOrUpdateEventInput {
   trainingId: string;
   clientName: string;
   clientPhone: string | null;
+  clientEmail?: string | null;
   clientUsername: string | null;
   clientTelegramId: string;
+  source?: "TELEGRAM" | "WEB";
   startAt: Date;
   endAt: Date;
   trainerComment?: string | null;
@@ -424,8 +426,10 @@ export class GoogleCalendarService {
     const telegramLink = normalizedUsername ? `https://t.me/${normalizedUsername}` : null;
 
     const lines = [
+      `Источник: ${input.source === "WEB" ? "Web" : "Telegram"}`,
       `Клиент: ${input.clientName}`,
       `Телефон: ${input.clientPhone ?? "не указан"}`,
+      input.clientEmail ? `Email: ${input.clientEmail}` : null,
       telegramLink ? `Username: @${normalizedUsername}` : "Username: не указан",
       telegramLink ? `Telegram: ${telegramLink}` : `Telegram ID: ${input.clientTelegramId}`,
       input.trainerComment ? `Комментарий тренера: ${input.trainerComment}` : null,

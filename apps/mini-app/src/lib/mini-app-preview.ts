@@ -68,6 +68,7 @@ type PreviewTokenPayload = {
 type PreviewBookingRecord = {
   id: string;
   clientId: string;
+  source?: "TELEGRAM" | "WEB";
   status: BookingStatusType;
   trainingStatus: TrainerTrainingDto["trainingStatus"] | null;
   startAt: string;
@@ -485,6 +486,7 @@ function buildPendingBooking(state: PreviewState, booking: PreviewBookingRecord)
 
   return {
     id: booking.id,
+    source: booking.source ?? "TELEGRAM",
     status: booking.status,
     createdAt: booking.createdAt,
     expiresAt: booking.expiresAt,
@@ -512,6 +514,7 @@ function buildTrainerTraining(state: PreviewState, booking: PreviewBookingRecord
   return {
     bookingId: booking.id,
     trainingId: `training-${booking.id}`,
+    source: booking.source ?? "TELEGRAM",
     bookingStatus: booking.status,
     trainingStatus: booking.trainingStatus ?? "SCHEDULED",
     startAt: booking.startAt,

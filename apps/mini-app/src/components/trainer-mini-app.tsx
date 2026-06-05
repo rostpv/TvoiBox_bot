@@ -264,6 +264,10 @@ function getNoSlotStatusLabel(status: NoSlotRequestStatusType): string {
   }
 }
 
+function getBookingSourceLabel(source?: PendingBookingDto["source"] | TrainerTrainingDto["source"]): string {
+  return source === "WEB" ? "Web" : "Telegram";
+}
+
 function groupSlotsByDay(slots: AvailableSlot[]) {
   const groups = new Map<string, AvailableSlot[]>();
 
@@ -289,7 +293,15 @@ function getClientContactHref(client: { username: string | null; telegramId: str
   return `tg://user?id=${client.telegramId}`;
 }
 
+function canOpenClientContact(client: { username: string | null; telegramId: string }): boolean {
+  return Boolean(client.username?.trim()) || !client.telegramId.startsWith("web:");
+}
+
 function openClientContact(client: { username: string | null; telegramId: string }): void {
+  if (!canOpenClientContact(client)) {
+    return;
+  }
+
   openExternalUrl(getClientContactHref(client));
 }
 
@@ -1371,19 +1383,21 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                           <span className="workout-card__time">{formatTime(item.slot.startAt)}</span>
                         </div>
                         <div className="record-card-head-actions">
-                          <button
-                            type="button"
-                            className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                            aria-label="Написать клиенту в Telegram"
-                            title="Написать клиенту в Telegram"
-                            onClick={() => openClientContact(item.client)}
-                          >
-                            <TelegramIcon />
-                          </button>
+                          {canOpenClientContact(item.client) ? (
+                            <button
+                              type="button"
+                              className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                              aria-label="Написать клиенту в Telegram"
+                              title="Написать клиенту в Telegram"
+                              onClick={() => openClientContact(item.client)}
+                            >
+                              <TelegramIcon />
+                            </button>
+                          ) : null}
                         </div>
                       </div>
 
-                    <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                    <p className="record-meta">{getBookingSourceLabel(item.source)} · {item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
                     <div className="workout-card__status" data-tone={getBookingTone(item.status)}>
                       {getBookingStatusLabel(item.status)}
                     </div>
@@ -1495,15 +1509,17 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                       </label>
 
                       <div className="record-actions workout-card__actions">
-                        <button
-                          type="button"
-                          className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                          aria-label="Написать клиенту в Telegram"
-                          title="Написать клиенту в Telegram"
-                          onClick={() => openClientContact(item.client)}
-                        >
-                          <TelegramIcon />
-                        </button>
+                        {canOpenClientContact(item.client) ? (
+                          <button
+                            type="button"
+                            className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                            aria-label="Написать клиенту в Telegram"
+                            title="Написать клиенту в Telegram"
+                            onClick={() => openClientContact(item.client)}
+                          >
+                            <TelegramIcon />
+                          </button>
+                        ) : null}
                         <button className="action-btn action-btn--secondary" disabled={isBusy} onClick={() => void handleUpdateNoSlotRequest(item.id, "REVIEWED")}>
                           Сохранить комментарий
                         </button>
@@ -1542,7 +1558,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                       <div>
                         <h3 className="record-title">{item.client.fullName}</h3>
                         <p className="record-meta">
-                          {formatDateTime(item.slot.startAt)} до {formatTime(item.slot.endAt)} · {item.client.phone || item.client.username || "без контакта"}
+                          {formatDateTime(item.slot.startAt)} до {formatTime(item.slot.endAt)} · {getBookingSourceLabel(item.source)} · {item.client.phone || item.client.username || "без контакта"}
                         </p>
                       </div>
                       <span className="status-pill" data-tone={getBookingTone(item.status)}>
@@ -1663,15 +1679,17 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                           <span className="workout-card__time">{formatTime(item.startAt)}</span>
                         </div>
                         <div className="record-card-head-actions">
-                          <button
-                            type="button"
-                            className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
-                            aria-label="Написать клиенту в Telegram"
-                            title="Написать клиенту в Telegram"
-                            onClick={() => openClientContact(item.client)}
-                          >
-                            <TelegramIcon />
-                          </button>
+                          {canOpenClientContact(item.client) ? (
+                            <button
+                              type="button"
+                              className="action-btn action-btn--secondary action-btn--icon action-btn--icon-tight"
+                              aria-label="Написать клиенту в Telegram"
+                              title="Написать клиенту в Telegram"
+                              onClick={() => openClientContact(item.client)}
+                            >
+                              <TelegramIcon />
+                            </button>
+                          ) : null}
                           {item.bookingStatus !== "CANCELLED" ? (
                             <button
                               className="action-btn action-btn--secondary calendar-icon-button"
@@ -1686,7 +1704,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                         </div>
                     </div>
 
-                    <p className="record-meta">{item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
+                    <p className="record-meta">{getBookingSourceLabel(item.source)} · {item.client.fullName} · {item.client.phone || item.client.username || "без контакта"}</p>
                     <div className="workout-card__status" data-tone={getBookingTone(item.bookingStatus)}>
                       {getBookingStatusLabel(item.bookingStatus)}
                     </div>
@@ -1785,7 +1803,7 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                       <div>
                         <h3 className="record-title">{item.client.fullName}</h3>
                         <p className="record-meta">
-                          {formatDateTime(item.startAt)} до {formatTime(item.endAt)} · {item.client.phone || item.client.username || "без контакта"}
+                          {formatDateTime(item.startAt)} до {formatTime(item.endAt)} · {getBookingSourceLabel(item.source)} · {item.client.phone || item.client.username || "без контакта"}
                         </p>
                       </div>
                       <span className="status-pill" data-tone={getBookingTone(item.bookingStatus)}>
@@ -2009,9 +2027,11 @@ export function TrainerMiniApp({ api, session }: TrainerMiniAppProps) {
                     </label>
 
                     <div className="record-actions">
-                      <button className="status-button" type="button" onClick={() => openClientContact(client)}>
-                        Написать в Telegram
-                      </button>
+                      {canOpenClientContact(client) ? (
+                        <button className="status-button" type="button" onClick={() => openClientContact(client)}>
+                          Написать в Telegram
+                        </button>
+                      ) : null}
                       {client.isBlacklisted ? (
                         <button className="secondary-button" disabled={isBusy} onClick={() => void handleRemoveFromBlacklist(client.id)}>
                           Убрать из чёрного списка

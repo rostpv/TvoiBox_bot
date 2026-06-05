@@ -29,6 +29,11 @@ enum BookingStatus {
   RESCHEDULED
 }
 
+enum BookingSource {
+  TELEGRAM
+  WEB
+}
+
 enum TrainingStatus {
   SCHEDULED
   CANCELLED
@@ -68,6 +73,8 @@ model Client {
   username          String?
   fullName          String
   phone             String?
+  phoneNormalized   String?              @unique
+  email             String?
   note              String?
   role              UserRole             @default(CLIENT)
   consentAcceptedAt DateTime?
@@ -80,10 +87,26 @@ model Client {
   trainings         Training[]
   noSlotRequests    NoSlotRequest[]
   blacklistEntries  BlacklistEntry[]
+  webSessions       WebClientSession[]
 
   @@index([fullName])
   @@index([phone])
+  @@index([phoneNormalized])
   @@map("clients")
+}
+
+model WebClientSession {
+  id            String   @id @default(cuid())
+  clientId      String
+  tokenHash     String   @unique
+  createdAt     DateTime @default(now())
+  lastSeenAt    DateTime @default(now())
+  expiresAt     DateTime?
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([expiresAt])
+  @@map("web_client_sessions")
 }
 
 model Slot {
@@ -108,6 +131,7 @@ model Booking {
   id               String        @id @default(cuid())
   clientId         String
   slotId           String
+  source           BookingSource @default(TELEGRAM)
   status           BookingStatus @default(PENDING)
   clientComment    String?
   trainerComment   String?
@@ -127,6 +151,7 @@ model Booking {
   proposedChanges  Reschedule[]
 
   @@index([clientId, status])
+  @@index([source, status])
   @@index([clientId, clientArchivedAt])
   @@index([trainerArchivedAt])
   @@index([clientDeletedAt])

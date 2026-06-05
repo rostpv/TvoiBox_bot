@@ -1864,6 +1864,46 @@ a {
   font-size: 12px;
 }
 
+.web-booking-page {
+  padding-bottom: 28px;
+}
+
+.web-booking-shell {
+  max-width: 1120px;
+}
+
+.web-booking-topbar {
+  position: relative;
+  top: auto;
+}
+
+.web-booking-hero {
+  padding: 24px;
+}
+
+.web-booking-photo {
+  width: min(220px, 100%);
+  justify-self: end;
+  border-radius: 22px;
+}
+
+.web-booking-grid {
+  align-items: start;
+}
+
+.web-booking-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.web-booking-submit {
+  margin-top: 14px;
+}
+
+.web-records-panel {
+  margin-top: 0;
+}
+
 @media (max-width: 980px) {
   .hero-grid,
   .content-grid {
@@ -1873,6 +1913,11 @@ a {
   .trainer-hero-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .web-booking-photo {
+    justify-self: start;
+    width: min(180px, 100%);
   }
 
   .home-actions-grid,

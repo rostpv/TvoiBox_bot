@@ -5,7 +5,7 @@
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { BookingStatus, Prisma, SlotStatus, SyncOperation, SyncStatus, TrainingStatus } from "@prisma/client";
+import { BookingSource, BookingStatus, Prisma, SlotStatus, SyncOperation, SyncStatus, TrainingStatus } from "@prisma/client";
 
 import { AppConfigService } from "../../config/app-config.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -32,6 +32,13 @@ export interface CreateBookingRequestInput {
   telegramId: string;
   slotId: string;
   clientComment?: string | null;
+}
+
+export interface CreateBookingRequestForClientInput {
+  clientId: string;
+  slotId: string;
+  clientComment?: string | null;
+  source: BookingSource;
 }
 
 export interface BookingRequestResult {
@@ -133,6 +140,7 @@ export interface ClientArchiveTrainingInput {
 
 export interface PendingBookingDto {
   id: string;
+  source: BookingSource;
   status: BookingStatus;
   createdAt: string;
   expiresAt: string;
@@ -144,6 +152,7 @@ export interface PendingBookingDto {
     fullName: string;
     username: string | null;
     phone: string | null;
+    email?: string | null;
   };
   slot: {
     id: string;
@@ -199,6 +208,7 @@ export interface GetTrainerTrainingsInput {
 export interface TrainerTrainingDto {
   bookingId: string;
   trainingId: string;
+  source: BookingSource;
   bookingStatus: BookingStatus;
   trainingStatus: TrainingStatus;
   startAt: string;
@@ -229,6 +239,7 @@ interface RescheduledBookingWithRelations {
   id: string;
   clientId: string;
   slotId: string;
+  source: BookingSource;
   status: BookingStatus;
   trainerComment: string | null;
   client: {
@@ -237,6 +248,7 @@ interface RescheduledBookingWithRelations {
     fullName: string;
     username: string | null;
     phone: string | null;
+    email?: string | null;
   };
   slot: {
     id: string;
@@ -291,11 +303,35 @@ export class BookingsService {
 
   async createBookingRequest(input: CreateBookingRequestInput): Promise<BookingRequestResult> {
     const telegramId = input.telegramId.trim();
-    const slotId = input.slotId.trim();
-    const clientComment = input.clientComment?.trim() || null;
-
     if (!telegramId) {
       throw new BadRequestException("telegramId is required");
+    }
+
+    const client = await this.prismaService.client.findUnique({
+      where: { telegramId },
+      select: { id: true },
+    });
+
+    if (!client) {
+      throw new BadRequestException("Client is not registered");
+    }
+
+    return this.createBookingRequestForClient({
+      clientId: client.id,
+      slotId: input.slotId,
+      clientComment: input.clientComment,
+      source: BookingSource.TELEGRAM,
+    });
+  }
+
+  async createBookingRequestForClient(input: CreateBookingRequestForClientInput): Promise<BookingRequestResult> {
+    const clientId = input.clientId.trim();
+    const slotId = input.slotId.trim();
+    const clientComment = input.clientComment?.trim() || null;
+    const source = input.source;
+
+    if (!clientId) {
+      throw new BadRequestException("clientId is required");
     }
 
     if (!slotId) {
@@ -306,7 +342,7 @@ export class BookingsService {
 
     const result = await this.prismaService.$transaction(async (transaction) => {
       const client = await transaction.client.findUnique({
-        where: { telegramId },
+        where: { id: clientId },
       });
 
       if (!client) {
@@ -362,6 +398,7 @@ export class BookingsService {
         data: {
           clientId: client.id,
           slotId: freshSlot.id,
+          source,
           status: BookingStatus.PENDING,
           clientComment,
           expiresAt,
@@ -397,7 +434,9 @@ export class BookingsService {
           telegramId: bookingDetails.client.telegramId,
           username: bookingDetails.client.username,
           phone: bookingDetails.client.phone,
+          email: bookingDetails.client.email,
         },
+        source: bookingDetails.source,
         startAt: bookingDetails.slot.startAt.toISOString(),
         clientComment,
       });
@@ -747,6 +786,7 @@ export class BookingsService {
             return {
               bookingId: booking.id,
               trainingId: booking.training!.id,
+              source: booking.source,
               bookingStatus: booking.status,
               trainingStatus: booking.training!.status,
               startAt: booking.slot.startAt.toISOString(),
@@ -1361,8 +1401,10 @@ export class BookingsService {
             trainingId: booking.training.id,
             clientName: booking.client.fullName,
             clientPhone: booking.client.phone,
+            clientEmail: booking.client.email,
             clientUsername: booking.client.username,
             clientTelegramId: booking.client.telegramId,
+            source: booking.source,
             startAt: booking.slot.startAt,
             endAt: booking.slot.endAt,
             trainerComment: booking.trainerComment,
@@ -1371,8 +1413,10 @@ export class BookingsService {
             trainingId: booking.training?.id ?? booking.id,
             clientName: booking.client.fullName,
             clientPhone: booking.client.phone,
+            clientEmail: booking.client.email,
             clientUsername: booking.client.username,
             clientTelegramId: booking.client.telegramId,
+            source: booking.source,
             startAt: booking.slot.startAt,
             endAt: booking.slot.endAt,
             trainerComment: booking.trainerComment,
@@ -1897,8 +1941,10 @@ export class BookingsService {
             trainingId: booking.training.id,
             clientName: booking.client.fullName,
             clientPhone: booking.client.phone,
+            clientEmail: booking.client.email,
             clientUsername: booking.client.username,
             clientTelegramId: booking.client.telegramId,
+            source: booking.source,
             startAt: proposedStartAt,
             endAt: proposedEndAt,
             trainerComment: booking.trainerComment,
@@ -1907,8 +1953,10 @@ export class BookingsService {
             trainingId: booking.training?.id ?? booking.id,
             clientName: booking.client.fullName,
             clientPhone: booking.client.phone,
+            clientEmail: booking.client.email,
             clientUsername: booking.client.username,
             clientTelegramId: booking.client.telegramId,
+            source: booking.source,
             startAt: proposedStartAt,
             endAt: proposedEndAt,
             trainerComment: booking.trainerComment,
@@ -2263,8 +2311,10 @@ export class BookingsService {
           trainingId: training.id,
           clientName: booking.client.fullName,
           clientPhone: booking.client.phone,
+          clientEmail: booking.client.email,
           clientUsername: booking.client.username,
           clientTelegramId: booking.client.telegramId,
+          source: booking.source,
           startAt: training.startAt,
           endAt: training.endAt,
           trainerComment: booking.trainerComment,
@@ -2276,8 +2326,10 @@ export class BookingsService {
           trainingId: training.id,
           clientName: booking.client.fullName,
           clientPhone: booking.client.phone,
+          clientEmail: booking.client.email,
           clientUsername: booking.client.username,
           clientTelegramId: booking.client.telegramId,
+          source: booking.source,
           startAt: training.startAt,
           endAt: training.endAt,
           trainerComment: booking.trainerComment,
@@ -2779,6 +2831,7 @@ export class BookingsService {
 
   private toPendingBookingDto(booking: {
     id: string;
+    source?: BookingSource;
     status: BookingStatus;
     createdAt: Date;
     expiresAt: Date;
@@ -2790,6 +2843,7 @@ export class BookingsService {
       fullName: string;
       username: string | null;
       phone: string | null;
+      email?: string | null;
     };
     slot: {
       id: string;
@@ -2800,6 +2854,7 @@ export class BookingsService {
   }): PendingBookingDto {
     return {
       id: booking.id,
+      source: booking.source ?? BookingSource.TELEGRAM,
       status: booking.status,
       createdAt: booking.createdAt.toISOString(),
       expiresAt: booking.expiresAt.toISOString(),
@@ -2811,6 +2866,7 @@ export class BookingsService {
         fullName: booking.client.fullName,
         username: booking.client.username,
         phone: booking.client.phone,
+        email: booking.client.email ?? null,
       },
       slot: {
         id: booking.slot.id,
@@ -2822,6 +2878,10 @@ export class BookingsService {
   }
 
   private async notifyClientBookingConfirmed(booking: PendingBookingDto) {
+    if (!this.canNotifyClientInTelegram(booking)) {
+      return;
+    }
+
     let calendarFile: ClientTrainingCalendarFileResult | null = null;
 
     try {
@@ -2839,6 +2899,10 @@ export class BookingsService {
   }
 
   private async notifyClientBookingRejected(booking: PendingBookingDto) {
+    if (!this.canNotifyClientInTelegram(booking)) {
+      return;
+    }
+
     await this.telegramNotificationsService.notifyClientAboutBookingRejected({
       bookingId: booking.id,
       clientTelegramId: booking.client.telegramId,
@@ -2848,6 +2912,10 @@ export class BookingsService {
   }
 
   private async notifyClientTrainerProposal(booking: PendingBookingDto) {
+    if (!this.canNotifyClientInTelegram(booking)) {
+      return;
+    }
+
     await this.telegramNotificationsService.notifyClientAboutTrainerProposal({
       bookingId: booking.id,
       clientTelegramId: booking.client.telegramId,
@@ -2856,6 +2924,10 @@ export class BookingsService {
   }
 
   private async notifyClientTrainerCancellation(booking: PendingBookingDto) {
+    if (!this.canNotifyClientInTelegram(booking)) {
+      return;
+    }
+
     await this.telegramNotificationsService.notifyClientAboutTrainerCancellation({
       bookingId: booking.id,
       clientTelegramId: booking.client.telegramId,
@@ -3014,6 +3086,10 @@ export class BookingsService {
         workdayEndMinute: 22 * 60,
       },
     });
+  }
+
+  private canNotifyClientInTelegram(booking: PendingBookingDto): boolean {
+    return booking.source === BookingSource.TELEGRAM && !booking.client.telegramId.startsWith("web:");
   }
 
   private getMoscowDateKey(date: Date): string {

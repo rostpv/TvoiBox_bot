@@ -66,6 +66,7 @@ export interface SlotClosureInfo {
 }
 
 export type BookingStatusType = "PENDING" | "CONFIRMED" | "REJECTED" | "EXPIRED" | "CANCELLED" | "RESCHEDULED";
+export type BookingSourceType = "TELEGRAM" | "WEB";
 
 export interface ClientTrainingDto {
   bookingId: string;
@@ -85,6 +86,7 @@ export interface ClientTrainingDto {
 
 export interface PendingBookingDto {
   id: string;
+  source: BookingSourceType;
   status: BookingStatusType;
   createdAt: string;
   expiresAt: string;
@@ -96,6 +98,7 @@ export interface PendingBookingDto {
     fullName: string;
     username: string | null;
     phone: string | null;
+    email?: string | null;
   };
   slot: {
     id: string;
@@ -108,6 +111,7 @@ export interface PendingBookingDto {
 export interface TrainerTrainingDto {
   bookingId: string;
   trainingId: string;
+  source: BookingSourceType;
   bookingStatus: BookingStatusType;
   trainingStatus: "SCHEDULED" | "CANCELLED" | "COMPLETED" | "RESCHEDULED";
   startAt: string;

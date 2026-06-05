@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
+import { randomBytes } from "node:crypto";
 
 import { AppConfigService } from "../../config/app-config.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -16,8 +17,15 @@ export interface UpsertClientProfileInput {
   username?: string | null;
   fullName: string;
   phone?: string | null;
+  email?: string | null;
   note?: string | null;
   consentAccepted?: boolean;
+}
+
+export interface UpsertWebClientProfileInput {
+  fullName: string;
+  phone: string;
+  email?: string | null;
 }
 
 export interface ClientDto {
@@ -26,6 +34,8 @@ export interface ClientDto {
   username: string | null;
   fullName: string;
   phone: string | null;
+  phoneNormalized: string | null;
+  email: string | null;
   note: string | null;
   consentAcceptedAt: string | null;
   isBlacklisted: boolean;
@@ -89,6 +99,7 @@ export class ClientsService {
     const fullName = input.fullName.trim();
     const username = input.username?.trim() || null;
     const phone = input.phone?.trim() || null;
+    const phoneNormalized = this.normalizePhoneForIdentity(phone);
 
     if (!telegramId) {
       throw new BadRequestException("telegramId is required");
@@ -127,6 +138,32 @@ export class ClientsService {
           username: nextUsername,
           fullName: nextFullName,
           phone: nextPhone,
+          phoneNormalized: this.normalizePhoneForIdentity(nextPhone),
+        },
+      });
+
+      return {
+        status: "already_registered",
+        client: this.toClientDto(updatedClient),
+      };
+    }
+
+    const existingWebClient = phoneNormalized
+      ? await this.prismaService.client.findUnique({
+          where: { phoneNormalized },
+        })
+      : null;
+
+    if (existingWebClient?.telegramId.startsWith("web:")) {
+      const updatedClient = await this.prismaService.client.update({
+        where: { id: existingWebClient.id },
+        data: {
+          telegramId,
+          username,
+          fullName,
+          phone,
+          phoneNormalized,
+          consentAcceptedAt: existingWebClient.consentAcceptedAt ?? new Date(),
         },
       });
 
@@ -142,6 +179,7 @@ export class ClientsService {
         username,
         fullName,
         phone,
+        phoneNormalized: existingWebClient ? null : phoneNormalized,
         note: null,
         consentAcceptedAt: new Date(),
       },
@@ -350,6 +388,8 @@ export class ClientsService {
     const fullName = input.fullName.trim();
     const username = input.username?.trim() || null;
     const phone = input.phone?.trim() || null;
+    const phoneNormalized = this.normalizePhoneForIdentity(phone);
+    const email = input.email?.trim() || null;
     const note = input.note?.trim() || null;
 
     if (!telegramId) {
@@ -365,12 +405,43 @@ export class ClientsService {
     });
 
     if (!existingClient) {
+      const existingWebClient = phoneNormalized
+        ? await this.prismaService.client.findUnique({
+            where: { phoneNormalized },
+          })
+        : null;
+
+      if (existingWebClient?.telegramId.startsWith("web:")) {
+        const updatedClient = await this.prismaService.client.update({
+          where: { id: existingWebClient.id },
+          data: {
+            telegramId,
+            username,
+            fullName,
+            phone,
+            phoneNormalized,
+            email: email ?? existingWebClient.email,
+            note,
+            consentAcceptedAt:
+              typeof input.consentAccepted === "boolean"
+                ? input.consentAccepted
+                  ? existingWebClient.consentAcceptedAt ?? new Date()
+                  : null
+                : existingWebClient.consentAcceptedAt,
+          },
+        });
+
+        return this.toClientDto(updatedClient);
+      }
+
       const createdClient = await this.prismaService.client.create({
         data: {
           telegramId,
           username,
           fullName,
           phone,
+          phoneNormalized: existingWebClient ? null : phoneNormalized,
+          email,
           note,
           consentAcceptedAt: input.consentAccepted ? new Date() : null,
         },
@@ -385,6 +456,8 @@ export class ClientsService {
         username,
         fullName,
         phone,
+        phoneNormalized,
+        email: email ?? existingClient.email,
         note,
         consentAcceptedAt:
           typeof input.consentAccepted === "boolean"
@@ -396,6 +469,59 @@ export class ClientsService {
     });
 
     return this.toClientDto(updatedClient);
+  }
+
+  async upsertWebClientProfile(input: UpsertWebClientProfileInput): Promise<ClientDto> {
+    const fullName = input.fullName.trim();
+    const phone = input.phone.trim();
+    const phoneNormalized = this.normalizePhoneForIdentity(phone);
+    const email = input.email?.trim() || null;
+
+    if (!fullName) {
+      throw new BadRequestException("fullName is required");
+    }
+
+    if (!phone) {
+      throw new BadRequestException("phone is required");
+    }
+
+    if (!phoneNormalized || phoneNormalized.length < 10) {
+      throw new BadRequestException("phone must contain at least 10 digits");
+    }
+
+    const existingClient = await this.prismaService.client.findUnique({
+      where: { phoneNormalized },
+    });
+
+    if (existingClient) {
+      const updatedClient = await this.prismaService.client.update({
+        where: { id: existingClient.id },
+        data: {
+          fullName,
+          phone,
+          phoneNormalized,
+          email: email ?? existingClient.email,
+          consentAcceptedAt: existingClient.consentAcceptedAt ?? new Date(),
+        },
+      });
+
+      return this.toClientDto(updatedClient);
+    }
+
+    const createdClient = await this.prismaService.client.create({
+      data: {
+        telegramId: this.buildSyntheticWebTelegramId(phoneNormalized),
+        username: null,
+        fullName,
+        phone,
+        phoneNormalized,
+        email,
+        note: null,
+        consentAcceptedAt: new Date(),
+      },
+    });
+
+    return this.toClientDto(createdClient);
   }
 
   private ensureTrainerAccess(trainerTelegramId: string): void {
@@ -410,12 +536,36 @@ export class ClientsService {
     }
   }
 
+  normalizePhoneForIdentity(phone: string | null | undefined): string | null {
+    const digits = phone?.replace(/\D+/gu, "") ?? "";
+    if (!digits) {
+      return null;
+    }
+
+    if (digits.length === 11 && digits.startsWith("8")) {
+      return `7${digits.slice(1)}`;
+    }
+
+    if (digits.length === 10) {
+      return `7${digits}`;
+    }
+
+    return digits;
+  }
+
+  private buildSyntheticWebTelegramId(phoneNormalized: string): string {
+    const suffix = randomBytes(6).toString("hex");
+    return `web:${phoneNormalized}:${suffix}`;
+  }
+
   private toClientDto(client: {
     id: string;
     telegramId: string;
     username: string | null;
     fullName: string;
     phone: string | null;
+    phoneNormalized?: string | null;
+    email?: string | null;
     note: string | null;
     consentAcceptedAt: Date | null;
     isBlacklisted: boolean;
@@ -428,6 +578,8 @@ export class ClientsService {
       username: client.username,
       fullName: client.fullName,
       phone: client.phone,
+      phoneNormalized: client.phoneNormalized ?? null,
+      email: client.email ?? null,
       note: client.note ?? null,
       consentAcceptedAt: client.consentAcceptedAt ? client.consentAcceptedAt.toISOString() : null,
       isBlacklisted: client.isBlacklisted,

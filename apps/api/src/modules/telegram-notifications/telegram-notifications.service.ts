@@ -20,6 +20,7 @@ interface ClientInfo {
   telegramId: string;
   username?: string | null;
   phone?: string | null;
+  email?: string | null;
 }
 
 interface TelegramCalendarFile {
@@ -42,13 +43,17 @@ export class TelegramNotificationsService {
   async notifyTrainerAboutBookingRequest(input: {
     bookingId: string;
     client: ClientInfo;
+    source?: "TELEGRAM" | "WEB";
     startAt: string;
     clientComment?: string | null;
   }) {
+    const sourceLine = input.source === "WEB" ? "Источник: Web" : "Источник: Telegram";
     const lines = [
+      sourceLine,
       "Новая заявка из mini app.",
       `Клиент: ${input.client.fullName}`,
       this.buildClientTelegramLine(input.client),
+      input.client.email ? `Email: ${input.client.email}` : null,
       `Время (МСК): ${this.formatDateTime(input.startAt)}`,
       input.clientComment ? `Комментарий клиента: ${input.clientComment}` : null,
       `Booking ID: ${input.bookingId}`,
