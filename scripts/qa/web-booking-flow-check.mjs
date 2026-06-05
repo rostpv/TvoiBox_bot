@@ -126,6 +126,39 @@ async function createWebTrainerSession(apiBaseUrl, secret) {
   });
 }
 
+async function ensureTelegramClient(apiBaseUrl, telegramId) {
+  await requestJson(`${apiBaseUrl}/clients/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId,
+      username: "web_booking_qa_telegram",
+      fullName: "Web QA Telegram Client",
+      phone: null,
+      consentAccepted: true,
+    }),
+  });
+}
+
+async function listTelegramAvailableSlots(apiBaseUrl, telegramId) {
+  return requestJson(
+    `${apiBaseUrl}/slots/available?telegramId=${encodeURIComponent(telegramId)}`,
+    { method: "GET" },
+  );
+}
+
+async function requestTelegramBooking(apiBaseUrl, telegramId, slotId) {
+  return request(`${apiBaseUrl}/bookings/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telegramId,
+      slotId,
+      clientComment: "web-booking-flow-check telegram conflict",
+    }),
+  });
+}
+
 async function authJson(apiBaseUrl, path, token, options) {
   return requestJson(`${apiBaseUrl}${path}`, {
     ...options,
@@ -164,6 +197,8 @@ async function main() {
     envFile.ADMIN_TELEGRAM_ID,
   );
   const webTrainerSecret = process.env.WEB_TRAINER_LOGIN_SECRET || envFile.WEB_TRAINER_LOGIN_SECRET;
+  const telegramConflictClientId =
+    process.env.WEB_BOOKING_QA_TELEGRAM_CLIENT_ID || `900${String(Date.now()).slice(-9)}`;
 
   if (!trainerTelegramId) {
     throw new Error("TRAINER_TELEGRAM_ID или ADMIN_TELEGRAM_ID обязателен для web booking QA");
@@ -174,6 +209,7 @@ async function main() {
 
   const slotStartAt = addHours(toFullHourUtc(new Date()), 96);
   await openSlot(apiBaseUrl, trainerTelegramId, slotStartAt);
+  await ensureTelegramClient(apiBaseUrl, telegramConflictClientId);
 
   const clientPhoneSuffix = String(Date.now()).slice(-8);
   const firstClientPhone =
@@ -231,6 +267,19 @@ async function main() {
     throw new Error("Вторая web-заявка смогла занять уже удержанный слот");
   }
 
+  const telegramSlotsWhileWebHeld = await listTelegramAvailableSlots(apiBaseUrl, telegramConflictClientId);
+  const telegramSlotStillVisible = (telegramSlotsWhileWebHeld || []).some(
+    (item) => item.startAt === slotStartAt.toISOString(),
+  );
+  if (telegramSlotStillVisible) {
+    throw new Error("Слот, удержанный web-заявкой, всё ещё виден Telegram-клиенту");
+  }
+
+  const telegramConflictResponse = await requestTelegramBooking(apiBaseUrl, telegramConflictClientId, slot.id);
+  if (telegramConflictResponse.ok) {
+    throw new Error("Telegram-клиент смог занять слот, уже удержанный web-заявкой");
+  }
+
   const trainerSession = await createWebTrainerSession(apiBaseUrl, webTrainerSecret);
   const pending = await authJson(apiBaseUrl, "/mini-app/trainer/bookings", trainerSession.token, { method: "GET" });
   const pendingBooking = (pending.items || []).find((item) => item.id === bookingResponse.booking.id);
@@ -266,6 +315,7 @@ async function main() {
   console.log(`API base URL: ${apiBaseUrl}`);
   console.log(`Web booking: ${bookingResponse.booking.id}`);
   console.log(`Confirmed training starts at: ${confirmedTraining.startAt}`);
+  console.log(`Telegram conflict client: ${telegramConflictClientId}`);
 }
 
 main().catch((error) => {
