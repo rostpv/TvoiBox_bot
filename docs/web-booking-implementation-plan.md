@@ -432,13 +432,13 @@
 - [x] Проверить web-запись в production.
 - [x] Проверить web-кабинет тренера в production.
 - [x] Проверить Telegram mini app в production.
-- [ ] Проверить Google Calendar в production.
+- [x] Проверить Google Calendar в production.
 
 Результат шага:
 
 - [x] Web-запись доступна в production.
 - [ ] Telegram mini app работает как раньше.
-- [ ] Тренерский контур принимает заявки из обоих источников.
+- [x] Тренерский контур принимает заявки из обоих источников.
 
 Лог:
 
@@ -455,7 +455,9 @@
 - 2026-06-05: `main` обновлён до `689755bdf0f86c111c0d045accdebf1d9f446d9a`; GitHub Actions deploy стартовал, но завершился `failure` на удалённом deploy-шаге. Release был загружен на VPS и `current` переключился, но Docker-образы остались старыми, поэтому `/booking`, `/trainer` и `/web/*` сначала отдавали `404`.
 - 2026-06-05: после перезагрузки VPS production восстановлен вручную: включён swap-файл 2 ГБ (`/swapfile`), пересобраны образы `api`, `mini-app`, `bot`, применена Prisma-схема через `prisma db push --accept-data-loss`, затем контейнеры пересозданы. Перед применением схемы создан backup `shared/manual-backups/before-web-deploy-20260605-142423.sql`; в production на момент backup было `clients=1`, `bookings=2`.
 - 2026-06-05: production smoke после восстановления прошёл: `https://api.tvoybox.ru/health` вернул `200` и `database.status=ok`; `https://app.tvoybox.ru/booking` и `https://app.tvoybox.ru/trainer` вернули `200`; корневая mini app страница `https://app.tvoybox.ru/` вернула `200`; Playwright дождался кнопок `Продолжить` и `Войти`, консоль без warnings/errors. `/web/trainer/session` на production secret вернул `201` и trainer token. API logs показывают mapped `/web/*` routes, mini app `Ready`, bot token validated и webhook started. Полный Telegram regression внутри Telegram не выполнялся.
-- 2026-06-05: Google Calendar в production и создание реальной production web-заявки не проверялись, чтобы не создавать тестовую запись/событие без отдельного решения.
+- 2026-06-05: production QA web-flow выполнен через API-контейнер на реальном production API/БД/Google Calendar. Скрипт создал тестовую web-заявку `cmq0uo0to000bo001h23nz1l5`, проверил повторный вход по телефону, конфликт второй web-заявки, конфликт Telegram-клиента на тот же слот, вход тренера через `/web/trainer/session`, видимость `source=WEB` и email, подтверждение заявки и отмену тренером. Cleanup завершён: booking `CANCELLED`, training `CANCELLED`, слот остался закрыт по текущей общей политике тренерской отмены.
+- 2026-06-05: Google Calendar production проверен по `calendar_sync_logs`: для training тестовой web-записи есть `CREATE|SUCCESS` и `CANCEL|SUCCESS` с `externalEventId=ra1h4hq065e28em4c5lorkkql0`. Ошибок Google Calendar в логах API за время QA не найдено.
+- 2026-06-05: обнаружена визуальная проблема `/booking` на мобильном: общий декоративный фон hero создавал большую пустую розовую область справа от фото тренера. Подготовлен CSS-fix: для `.web-booking-hero` отключён общий `::after`, hero перестроен в компактную сетку текст + фото, размеры фото и типографика адаптированы для mobile/desktop. Локальный `corepack pnpm --filter @tvoy-box/mini-app build` прошёл, Playwright screenshot на `390x844` и `1365x900` показал аккуратный layout без пустого пятна.
 
 ## Шаг 11: обновить документацию и закрыть этап
 
