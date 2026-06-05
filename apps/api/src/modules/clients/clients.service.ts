@@ -26,6 +26,7 @@ export interface UpsertWebClientProfileInput {
   fullName: string;
   phone: string;
   email?: string | null;
+  consentAccepted?: boolean;
 }
 
 export interface ClientDto {
@@ -493,6 +494,10 @@ export class ClientsService {
       throw new BadRequestException("fullName is required");
     }
 
+    if (!existingClient && !input.consentAccepted) {
+      throw new BadRequestException("consentAccepted must be true");
+    }
+
     if (existingClient) {
       const updatedClient = await this.prismaService.client.update({
         where: { id: existingClient.id },
@@ -501,7 +506,7 @@ export class ClientsService {
           phone,
           phoneNormalized,
           email: email ?? existingClient.email,
-          consentAcceptedAt: existingClient.consentAcceptedAt ?? new Date(),
+          consentAcceptedAt: input.consentAccepted ? existingClient.consentAcceptedAt ?? new Date() : existingClient.consentAcceptedAt,
         },
       });
 

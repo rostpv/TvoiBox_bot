@@ -6,6 +6,7 @@ interface CreateSessionBody {
   fullName?: string;
   phone?: string;
   email?: string | null;
+  consentAccepted?: boolean;
 }
 
 interface CreateTrainerSessionBody {
@@ -22,6 +23,10 @@ interface RequestBookingBody {
 interface ClientTrainingActionBody {
   bookingId?: string;
   clientComment?: string;
+}
+
+interface ClientRescheduleBody extends ClientTrainingActionBody {
+  targetSlotId?: string;
 }
 
 interface ClientProposalDecisionBody {
@@ -56,6 +61,7 @@ export class WebBookingController {
       fullName: body.fullName ?? "",
       phone: body.phone ?? "",
       email: body.email ?? null,
+      consentAccepted: body.consentAccepted,
     });
 
     return {
@@ -96,6 +102,7 @@ export class WebBookingController {
         fullName: body.fullName ?? "",
         phone: body.phone ?? "",
         email: body.email ?? null,
+        consentAccepted: body.consentAccepted,
       }),
     };
   }
@@ -133,6 +140,30 @@ export class WebBookingController {
     return this.webBookingService.cancelClientTraining(this.extractBearerToken(authorization), {
       bookingId: body.bookingId ?? "",
       clientComment: body.clientComment,
+    });
+  }
+
+  @Post("client/trainings/reschedule")
+  async rescheduleClientTraining(@Headers("authorization") authorization: string | undefined, @Body() body: ClientRescheduleBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.rescheduleClientTraining(this.extractBearerToken(authorization), {
+      bookingId: body.bookingId ?? "",
+      targetSlotId: body.targetSlotId ?? "",
+      clientComment: body.clientComment,
+    });
+  }
+
+  @Post("client/trainings/archive")
+  async archiveClientTraining(@Headers("authorization") authorization: string | undefined, @Body() body: ClientTrainingActionBody) {
+    if (!body || typeof body !== "object") {
+      throw new BadRequestException("Invalid request body");
+    }
+
+    return this.webBookingService.archiveClientTraining(this.extractBearerToken(authorization), {
+      bookingId: body.bookingId ?? "",
     });
   }
 

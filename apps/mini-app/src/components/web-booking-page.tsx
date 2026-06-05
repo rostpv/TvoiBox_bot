@@ -9,6 +9,7 @@ import {
   WebClientProfile,
   WebClientTraining,
 } from "../lib/web-booking-api";
+import { openExternalUrl } from "../lib/telegram-link";
 
 interface ClientFormState {
   fullName: string;
@@ -18,8 +19,10 @@ interface ClientFormState {
 
 type MessageTone = "success" | "error" | "info";
 type WebScreenId = "home" | "booking" | "records" | "profile";
+type RecordsViewMode = "active" | "archive";
 
 const SESSION_STORAGE_KEY = "tvoy-box-web-client-token";
+const SUPPORT_TELEGRAM_URL = "https://t.me/RostPV";
 
 function formatDayLabel(dateIso: string): string {
   return new Intl.DateTimeFormat("ru-RU", {
@@ -37,6 +40,14 @@ function formatDateTime(dateIso: string): string {
     month: "long",
     hour: "2-digit",
     minute: "2-digit",
+  }).format(new Date(dateIso));
+}
+
+function formatDateOnly(dateIso: string): string {
+  return new Intl.DateTimeFormat("ru-RU", {
+    timeZone: "Europe/Moscow",
+    day: "numeric",
+    month: "long",
   }).format(new Date(dateIso));
 }
 
@@ -65,6 +76,12 @@ function groupSlotsByDay(slots: WebAvailableSlot[]) {
   }));
 }
 
+function sortClientRecords(items: WebClientTraining[], view: RecordsViewMode): WebClientTraining[] {
+  return [...items].sort((left, right) => view === "archive"
+    ? right.startAt.localeCompare(left.startAt)
+    : left.startAt.localeCompare(right.startAt));
+}
+
 function getStatusLabel(item: WebClientTraining): string {
   if (item.isAwaitingTrainerDecision) {
     return "ожидает подтверждения";
@@ -75,16 +92,18 @@ function getStatusLabel(item: WebClientTraining): string {
   }
 
   switch (item.bookingStatus) {
+    case "PENDING":
+      return "ожидает подтверждения";
     case "CONFIRMED":
       return "подтверждено";
+    case "RESCHEDULED":
+      return "предложен перенос";
     case "CANCELLED":
       return "отменено";
     case "REJECTED":
       return "отклонено";
     case "EXPIRED":
       return "истекло";
-    default:
-      return item.bookingStatus.toLowerCase();
   }
 }
 
@@ -94,6 +113,9 @@ function getStatusTone(item: WebClientTraining): "pending" | "success" | "danger
   }
 
   switch (item.bookingStatus) {
+    case "PENDING":
+    case "RESCHEDULED":
+      return "pending";
     case "CONFIRMED":
       return "success";
     case "CANCELLED":
@@ -124,15 +146,16 @@ export function WebBookingPage() {
   const [records, setRecords] = useState<WebClientTraining[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState("");
   const [comment, setComment] = useState("");
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [recordsView, setRecordsView] = useState<RecordsViewMode>("active");
+  const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null);
   const [screen, setScreen] = useState<WebScreenId>("home");
   const [isBusy, setIsBusy] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ tone: MessageTone; text: string } | null>(null);
 
   const slotGroups = groupSlotsByDay(slots);
-  const upcomingRecords = records
-    .filter((item) => new Date(item.endAt).getTime() >= Date.now())
-    .sort((left, right) => left.startAt.localeCompare(right.startAt));
+  const visibleRecords = sortClientRecords(records, recordsView);
 
   useEffect(() => {
     (window as Window & { __TVOY_BOX_CLIENT_BOOTED?: boolean }).__TVOY_BOX_CLIENT_BOOTED = true;
@@ -155,6 +178,7 @@ export function WebBookingPage() {
       const response = await api.getMe();
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
+      setConsentAccepted(Boolean(response.profile.consentAcceptedAt));
       await loadBookingContext();
       setScreen("home");
     } catch {
@@ -166,16 +190,26 @@ export function WebBookingPage() {
     }
   };
 
-  const loadBookingContext = async () => {
+  const loadBookingContext = async (view = recordsView) => {
     const [nextSlots, nextRecords] = await Promise.all([
       api.getSlots(),
-      api.getTrainings(),
+      api.getTrainings({ includeArchived: view === "archive" }),
     ]);
     setSlots(nextSlots);
-    setRecords(nextRecords.items);
+    setRecords(sortClientRecords(nextRecords.items, view));
+  };
+
+  const loadRecords = async (view = recordsView) => {
+    const nextRecords = await api.getTrainings({ includeArchived: view === "archive" });
+    setRecords(sortClientRecords(nextRecords.items, view));
   };
 
   const handleStartSession = async (mode: "profile" | "phone-only" = "profile") => {
+    if (mode === "profile" && !consentAccepted) {
+      setMessage({ tone: "error", text: "Подтвердите согласие на обработку персональных данных." });
+      return;
+    }
+
     setIsSubmitting(true);
     setMessage(null);
 
@@ -184,10 +218,12 @@ export function WebBookingPage() {
         fullName: mode === "phone-only" ? "" : clientForm.fullName,
         phone: clientForm.phone,
         email: mode === "phone-only" ? null : clientForm.email || null,
+        consentAccepted: mode === "profile" ? consentAccepted : undefined,
       });
       window.localStorage.setItem(SESSION_STORAGE_KEY, response.token);
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
+      setConsentAccepted(Boolean(response.profile.consentAcceptedAt));
       await loadBookingContext();
       setScreen("home");
       setMessage({
@@ -214,9 +250,11 @@ export function WebBookingPage() {
         fullName: clientForm.fullName,
         phone: clientForm.phone,
         email: clientForm.email || null,
+        consentAccepted,
       });
       setProfile(response.profile);
       setClientForm(toClientForm(response.profile));
+      setConsentAccepted(Boolean(response.profile.consentAcceptedAt));
       setMessage({ tone: "success", text: "Контакты обновлены." });
     } catch (error) {
       const normalizedError = error as Error;
@@ -236,6 +274,21 @@ export function WebBookingPage() {
     setMessage(null);
 
     try {
+      if (rescheduleBookingId) {
+        await api.rescheduleTraining({
+          bookingId: rescheduleBookingId,
+          targetSlotId: selectedSlotId,
+          clientComment: comment || undefined,
+        });
+        setRescheduleBookingId(null);
+        setSelectedSlotId("");
+        setComment("");
+        await loadBookingContext();
+        setScreen("records");
+        setMessage({ tone: "success", text: "Запрос на перенос отправлен тренеру." });
+        return;
+      }
+
       await api.requestBooking({
         slotId: selectedSlotId,
         clientComment: comment || null,
@@ -311,6 +364,48 @@ export function WebBookingPage() {
     }
   };
 
+  const handleStartReschedule = (bookingId: string) => {
+    setRescheduleBookingId(bookingId);
+    setSelectedSlotId("");
+    setComment("");
+    openScreen("booking");
+  };
+
+  const handleArchiveRecord = async (bookingId: string) => {
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await api.archiveClientTraining({ bookingId });
+      await loadRecords(recordsView);
+      setMessage({ tone: "success", text: "Запись удалена из списка." });
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось удалить запись из списка." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRecordsViewChange = async (view: RecordsViewMode) => {
+    setRecordsView(view);
+    setIsSubmitting(true);
+    setMessage(null);
+
+    try {
+      await loadRecords(view);
+    } catch (error) {
+      const normalizedError = error as Error;
+      setMessage({ tone: "error", text: normalizedError.message || "Не удалось загрузить записи." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleContactTrainer = () => {
+    openExternalUrl(SUPPORT_TELEGRAM_URL);
+  };
+
   const handleLogout = () => {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     api.setToken(null);
@@ -319,6 +414,9 @@ export function WebBookingPage() {
     setRecords([]);
     setSelectedSlotId("");
     setComment("");
+    setConsentAccepted(false);
+    setRecordsView("active");
+    setRescheduleBookingId(null);
     setClientForm({ fullName: "", phone: "", email: "" });
     setScreen("home");
     setMessage({ tone: "info", text: "Данные на этом устройстве очищены." });
@@ -326,8 +424,11 @@ export function WebBookingPage() {
 
   const openScreen = (nextScreen: WebScreenId) => {
     setScreen(nextScreen);
-    if (nextScreen === "booking" || nextScreen === "records") {
-      void loadBookingContext();
+    if (nextScreen === "booking") {
+      void loadBookingContext(recordsView);
+    }
+    if (nextScreen === "records") {
+      void loadRecords(recordsView);
     }
   };
 
@@ -436,7 +537,16 @@ export function WebBookingPage() {
                   placeholder="name@example.com"
                 />
               </label>
-              <button className="primary-button" disabled={isSubmitting} onClick={() => void handleStartSession()}>
+              <label className="checkbox-row checkbox-row-soft">
+                <input
+                  type="checkbox"
+                  checked={consentAccepted}
+                  onChange={(event) => setConsentAccepted(event.target.checked)}
+                />
+                <span>Согласие на обработку персональных данных</span>
+              </label>
+              {!consentAccepted ? <p className="consent-note">Без согласия нельзя создать новую web-регистрацию.</p> : null}
+              <button className="primary-button" disabled={isSubmitting || !consentAccepted} onClick={() => void handleStartSession()}>
                 Продолжить
               </button>
               <button
@@ -471,9 +581,9 @@ export function WebBookingPage() {
             <article className="action-card action-card-home">
               <strong>Связь с тренером</strong>
               <p>Если хочется что-то обсудить, можно быстро написать тренеру в Telegram.</p>
-              <a className="secondary-button support-link-button action-card-button" href="https://t.me/RostPV" target="_blank" rel="noreferrer">
+              <button className="secondary-button support-link-button action-card-button" type="button" onClick={handleContactTrainer}>
                 Написать тренеру
-              </a>
+              </button>
             </article>
           </section>
         ) : null}
@@ -481,12 +591,25 @@ export function WebBookingPage() {
         {!isBusy && profile && screen === "booking" ? (
           <section className="panel booking-panel web-booking-panel">
             <div className="booking-header">
-              <button className="back-link" disabled={isSubmitting} onClick={() => openScreen("home")}>
+              <button
+                className="back-link"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setRescheduleBookingId(null);
+                  setSelectedSlotId("");
+                  setComment("");
+                  openScreen(rescheduleBookingId ? "records" : "home");
+                }}
+              >
                 ← Назад
               </button>
               <div>
-                <h2 className="panel-title">Запись на тренировку</h2>
-                <p className="panel-text">Выберите удобный день и время для занятия.</p>
+                <h2 className="panel-title">{rescheduleBookingId ? "Перенос записи" : "Запись на тренировку"}</h2>
+                <p className="panel-text">
+                  {rescheduleBookingId
+                    ? "Выберите новое удобное время, и тренер получит запрос на перенос."
+                    : "Выберите удобный день и время для занятия."}
+                </p>
               </div>
               <button className="secondary-button secondary-button-compact" disabled={isSubmitting} onClick={() => void loadBookingContext()}>
                 Обновить
@@ -532,7 +655,7 @@ export function WebBookingPage() {
                 />
               </label>
               <button className="primary-button booking-submit-button" disabled={isSubmitting || !selectedSlotId} onClick={() => void handleRequestBooking()}>
-                Записаться
+                {rescheduleBookingId ? "Отправить запрос на перенос" : "Записаться"}
               </button>
             </div>
           </section>
@@ -572,6 +695,14 @@ export function WebBookingPage() {
                   placeholder="name@example.com"
                 />
               </label>
+              <label className="checkbox-row checkbox-row-soft">
+                <input
+                  type="checkbox"
+                  checked={consentAccepted}
+                  onChange={(event) => setConsentAccepted(event.target.checked)}
+                />
+                <span>Согласие на обработку персональных данных</span>
+              </label>
               <div className="record-actions">
                 <button className="primary-button" disabled={isSubmitting} onClick={() => void handleUpdateProfile()}>
                   Сохранить профиль
@@ -593,11 +724,27 @@ export function WebBookingPage() {
                 </button>
                 <div className="panel-header-actions panel-header-actions-tight">
                   <button
+                    className="chip-button chip-button-compact header-toggle-button"
+                    data-active={recordsView === "active" ? "true" : "false"}
+                    disabled={isSubmitting}
+                    onClick={() => void handleRecordsViewChange("active")}
+                  >
+                    Актуальные
+                  </button>
+                  <button
+                    className="chip-button chip-button-compact header-toggle-button"
+                    data-active={recordsView === "archive" ? "true" : "false"}
+                    disabled={isSubmitting}
+                    onClick={() => void handleRecordsViewChange("archive")}
+                  >
+                    Архив
+                  </button>
+                  <button
                     className="secondary-button secondary-button-compact header-action-button"
                     aria-label="Обновить записи"
                     title="Обновить"
                     disabled={isSubmitting}
-                    onClick={() => void loadBookingContext()}
+                    onClick={() => void loadRecords(recordsView)}
                   >
                     Обновить
                   </button>
@@ -605,59 +752,105 @@ export function WebBookingPage() {
               </div>
               <div className="panel-header-copy panel-header-copy-wide">
                 <h2 className="panel-title">Мои записи</h2>
-                <p className="panel-text">Здесь собраны актуальные тренировки и текущие статусы по ним.</p>
+                <p className="panel-text">
+                  {recordsView === "archive"
+                    ? "Здесь хранятся прошедшие тренировки, которые автоматически ушли из активного списка."
+                    : "Здесь собраны актуальные тренировки и текущие статусы по ним."}
+                </p>
               </div>
             </div>
 
-            {upcomingRecords.length === 0 ? (
+            {visibleRecords.length === 0 ? (
               <div className="empty-state">
-                <strong>Пока нет актуальных записей</strong>
-                <span>Когда будете готовы, можно сразу вернуться к выбору времени.</span>
-                <button className="primary-button booking-submit-button" onClick={() => openScreen("booking")}>
-                  Перейти к записи
-                </button>
+                <strong>{recordsView === "archive" ? "Архив пока пуст" : "Пока нет актуальных записей"}</strong>
+                <span>
+                  {recordsView === "archive"
+                    ? "Прошедшие тренировки появятся здесь автоматически."
+                    : "Когда будете готовы, можно сразу вернуться к выбору времени."}
+                </span>
+                {recordsView === "active" ? (
+                  <button className="primary-button booking-submit-button" onClick={() => openScreen("booking")}>
+                    Перейти к записи
+                  </button>
+                ) : null}
               </div>
             ) : (
               <div className="record-list">
-                {upcomingRecords.map((item) => (
-                  <article className="record-card workout-card" key={item.bookingId}>
-                    <div className="workout-card__head">
-                      <div className="workout-card__summary">
-                        <div className="workout-card__top">
-                          <div className="workout-card__date">{formatDateTime(item.startAt)}</div>
+                {visibleRecords.map((item) => {
+                  const isPastConfirmedTraining = item.bookingStatus === "CONFIRMED"
+                    && item.trainingStatus === "SCHEDULED"
+                    && new Date(item.endAt).getTime() <= Date.now();
+                  const primaryComment = item.trainerComment
+                    ? `Комментарий: ${item.trainerComment}`
+                    : item.clientComment
+                      ? `Комментарий: ${item.clientComment}`
+                      : isPastConfirmedTraining && !item.canCancel && !item.canReschedule
+                        ? "Тренировка уже прошла, поэтому её нельзя перенести или отменить."
+                        : null;
+
+                  return (
+                    <article className="record-card workout-card" key={item.bookingId}>
+                      <div className="workout-card__head">
+                        <div className="workout-card__summary">
+                          <div className="workout-card__top">
+                            <div className="workout-card__date">{formatDateOnly(item.startAt)}</div>
+                            <div className="workout-card__time">{formatTime(item.startAt)}</div>
+                          </div>
+                          <div className="workout-card__status" data-tone={getStatusTone(item)}>
+                            {getStatusLabel(item)}
+                          </div>
                         </div>
-                        <div className="workout-card__status" data-tone={getStatusTone(item)}>
-                          {getStatusLabel(item)}
+                      </div>
+                      {primaryComment ? <p className="workout-card__comment">{primaryComment}</p> : null}
+                      {item.bookingStatus === "CONFIRMED" && item.trainingStatus !== "CANCELLED" && !item.isAwaitingTrainerDecision ? (
+                        <div className="workout-card__actions">
+                          <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
+                            Добавить в календарь
+                          </a>
                         </div>
-                      </div>
-                    </div>
-                    {item.trainerComment ? <p className="workout-card__comment">{item.trainerComment}</p> : null}
-                    {item.bookingStatus === "CONFIRMED" && item.trainingStatus !== "CANCELLED" ? (
-                      <div className="workout-card__actions">
-                        <a className="status-button action-btn action-btn--secondary" href={api.getCalendarFileUrl(item.bookingId)}>
-                          Добавить в календарь
-                        </a>
-                      </div>
-                    ) : null}
-                    {item.hasTrainerProposal ? (
-                      <div className="workout-card__actions">
-                        <button className="action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleAcceptProposal(item.bookingId)}>
-                          Принять перенос
-                        </button>
-                        <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleDeclineProposal(item.bookingId)}>
-                          Отклонить
-                        </button>
-                      </div>
-                    ) : null}
-                    {item.canCancel && item.bookingStatus !== "CANCELLED" ? (
-                      <div className="workout-card__actions">
-                        <button className="action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleCancelRecord(item.bookingId)}>
-                          {item.isAwaitingTrainerDecision ? "Отменить заявку" : "Отменить"}
-                        </button>
-                      </div>
-                    ) : null}
-                  </article>
-                ))}
+                      ) : null}
+                      {recordsView === "active" ? (
+                        <div className="workout-card__actions">
+                          {item.canReschedule ? (
+                            <button className="status-button action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => handleStartReschedule(item.bookingId)}>
+                              Перенести
+                            </button>
+                          ) : null}
+                          {item.canCancel ? (
+                            <button
+                              className={item.isAwaitingTrainerDecision ? "status-button action-btn action-btn--danger-soft" : "status-button action-btn action-btn--danger"}
+                              disabled={isSubmitting}
+                              onClick={() => void handleCancelRecord(item.bookingId)}
+                            >
+                              {item.isAwaitingTrainerDecision ? "Отменить заявку" : "Отменить"}
+                            </button>
+                          ) : null}
+                          {item.hasTrainerProposal ? (
+                            <>
+                              <button className="status-button action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleAcceptProposal(item.bookingId)}>
+                                Принять перенос
+                              </button>
+                              <button className="status-button action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleDeclineProposal(item.bookingId)}>
+                                Отклонить
+                              </button>
+                            </>
+                          ) : null}
+                          {item.canDelete ? (
+                            <button className="status-button action-btn action-btn--secondary" disabled={isSubmitting} onClick={() => void handleArchiveRecord(item.bookingId)}>
+                              Удалить из списка
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className="workout-card__actions">
+                          <button className="status-button action-btn action-btn--danger-soft" disabled={isSubmitting} onClick={() => void handleArchiveRecord(item.bookingId)}>
+                            Удалить
+                          </button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
             )}
           </section>

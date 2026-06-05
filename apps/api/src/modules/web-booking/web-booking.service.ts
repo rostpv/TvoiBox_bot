@@ -32,6 +32,7 @@ export class WebBookingService {
     fullName: string;
     phone: string;
     email?: string | null;
+    consentAccepted?: boolean;
   }): Promise<WebClientSessionPayload> {
     const client = await this.clientsService.upsertWebClientProfile(input);
     const token = randomBytes(32).toString("base64url");
@@ -62,6 +63,7 @@ export class WebBookingService {
     fullName: string;
     phone: string;
     email?: string | null;
+    consentAccepted?: boolean;
   }): Promise<ClientDto> {
     const session = await this.getSessionByToken(token);
     const nextPhoneNormalized = this.clientsService.normalizePhoneForIdentity(input.phone);
@@ -116,6 +118,30 @@ export class WebBookingService {
       telegramId: session.client.telegramId,
       bookingId: input.bookingId,
       clientComment: input.clientComment,
+    });
+  }
+
+  async rescheduleClientTraining(token: string, input: {
+    bookingId: string;
+    targetSlotId: string;
+    clientComment?: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.bookingsService.rescheduleTrainingByClient({
+      telegramId: session.client.telegramId,
+      bookingId: input.bookingId,
+      targetSlotId: input.targetSlotId,
+      clientComment: input.clientComment,
+    });
+  }
+
+  async archiveClientTraining(token: string, input: {
+    bookingId: string;
+  }) {
+    const session = await this.getSessionByToken(token);
+    return this.bookingsService.archiveTrainingByClient({
+      telegramId: session.client.telegramId,
+      bookingId: input.bookingId,
     });
   }
 

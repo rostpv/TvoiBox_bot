@@ -87,6 +87,7 @@ export class WebBookingApi {
     fullName: string;
     phone: string;
     email?: string | null;
+    consentAccepted?: boolean;
   }): Promise<SessionResponse> {
     const response = await this.request<SessionResponse>("/web/client/session", {
       method: "POST",
@@ -104,6 +105,7 @@ export class WebBookingApi {
     fullName: string;
     phone: string;
     email?: string | null;
+    consentAccepted?: boolean;
   }): Promise<ProfileResponse> {
     return this.authRequest<ProfileResponse>("/web/client/me", {
       method: "POST",
@@ -125,12 +127,36 @@ export class WebBookingApi {
     });
   }
 
-  async getTrainings(): Promise<TrainingsResponse> {
-    return this.authRequest<TrainingsResponse>("/web/client/trainings", { method: "GET" });
+  async getTrainings(params?: { includeArchived?: boolean }): Promise<TrainingsResponse> {
+    const search = new URLSearchParams();
+    if (params?.includeArchived) {
+      search.set("includeArchived", "true");
+    }
+    const suffix = search.toString() ? `?${search.toString()}` : "";
+
+    return this.authRequest<TrainingsResponse>(`/web/client/trainings${suffix}`, { method: "GET" });
   }
 
   async cancelTraining(payload: { bookingId: string; clientComment?: string }): Promise<BookingActionResponse> {
     return this.authRequest<BookingActionResponse>("/web/client/trainings/cancel", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async rescheduleTraining(payload: {
+    bookingId: string;
+    targetSlotId: string;
+    clientComment?: string;
+  }): Promise<BookingActionResponse> {
+    return this.authRequest<BookingActionResponse>("/web/client/trainings/reschedule", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async archiveClientTraining(payload: { bookingId: string }): Promise<BookingActionResponse> {
+    return this.authRequest<BookingActionResponse>("/web/client/trainings/archive", {
       method: "POST",
       body: JSON.stringify(payload),
     });
